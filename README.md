@@ -9,6 +9,7 @@ A web interface for generating and combining 10-second videos using the Wan2.1 t
 - Combine multiple clips into longer movies
 - Batch process multiple prompts
 - GPU usage monitoring to prevent conflicts
+- Dark mode UI for reduced eye strain
 
 ## Requirements
 
@@ -33,6 +34,21 @@ A web interface for generating and combining 10-second videos using the Wan2.1 t
 ./run.sh --port=5001
 ```
 
+### Running a Test Server
+
+For testing new features without affecting the main service:
+
+```bash
+./test_server.sh [port]
+```
+
+Example:
+```bash
+./test_server.sh 5002
+```
+
+This will start a test instance on port 5002 (or any specified port).
+
 ### Enhancing Prompts
 
 ```bash
@@ -55,6 +71,7 @@ A web interface for generating and combining 10-second videos using the Wan2.1 t
 
 - `app.py`: Main Flask application
 - `run.sh`: Script to start the web interface
+- `test_server.sh`: Script to start a test server on a specified port
 - `enhance_prompts.py`: Script to enhance prompts
 - `batch_generate.py`: Script for batch processing
 - `templates/`: HTML templates for the web interface
