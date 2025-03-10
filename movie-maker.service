@@ -1,0 +1,24 @@
+[Unit]
+Description=Movie Maker Web Application
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tdeshane
+WorkingDirectory=/home/tdeshane/movie_maker
+ExecStart=/home/tdeshane/movie_maker/run.sh --port=5001
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONUNBUFFERED=1
+
+# Hardening measures
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target 

@@ -1,0 +1,3 @@
+A red ball bouncing
+A blue cube rotating
+A yellow star pulsating 

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Maker</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 40px;
+            background-color: #f8f9fa;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+        }
+        .video-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+        }
+        .clip-selection {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .loading-icon {
+            animation: spin 2s linear infinite;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .prompt-badge {
+            font-size: 0.8rem;
+            background-color: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 20px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .clip-item {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        .clip-item:last-child {
+            border-bottom: none;
+        }
+        .clip-controls {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="mb-4">
+            <div class="p-5 text-center bg-light rounded-3">
+                <h1 class="mb-3">Movie Maker</h1>
+                <h4 class="mb-3">Create and combine 10-second video clips using text prompts</h4>
+                <p class="lead">Generate videos up to 10 seconds (160 frames) and stitch them together to create longer movies.</p>
+            </div>
+        </header>
+
+        <div class="row">
+            <!-- Video Generation Form -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="mb-0">Generate a Video Clip</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="generateForm">
+                            <div class="mb-3">
+                                <label for="prompt" class="form-label">Text Prompt</label>
+                                <textarea class="form-control" id="prompt" name="prompt" rows="3" placeholder="Describe what you want to see in the video..." required></textarea>
+                                <div class="form-text">Be creative with your description. The more detailed, the better!</div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Generate Video</button>
+                            </div>
+                        </form>
+                        
+                        <div id="generationLoading" class="loading mt-3">
+                            <div class="loading-icon">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            <p>Generating video... This may take 15-20 minutes.</p>
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="generationResult" class="mt-3" style="display: none;">
+                            <div class="alert" role="alert"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Video Combination Form -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="mb-0">Create a Movie</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="combineForm">
+                            <div class="mb-3">
+                                <label for="movieTitle" class="form-label">Movie Title</label>
+                                <input type="text" class="form-control" id="movieTitle" name="movie_title" placeholder="Enter a title for your movie" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Select Clips to Combine</label>
+                                <div class="clip-selection p-2 border rounded">
+                                    {% if clips %}
+                                        {% for clip in clips %}
+                                            <div class="form-check clip-item">
+                                                <input class="form-check-input" type="checkbox" name="clips" value="{{ clip.filename }}" id="clip{{ loop.index }}">
+                                                <label class="form-check-label" for="clip{{ loop.index }}">
+                                                    {{ clip.created }} 
+                                                    <span class="ms-2 prompt-badge" title="{{ clip.prompt }}">
+                                                        {{ clip.prompt }}
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted text-center py-3">No clips available. Generate some clips first!</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success" {% if not clips %}disabled{% endif %}>Create Movie</button>
+                            </div>
+                        </form>
+                        
+                        <div id="combinationLoading" class="loading mt-3">
+                            <div class="loading-icon">
+                                <i class="fas fa-film"></i>
+                            </div>
+                            <p>Creating movie... This should take just a moment.</p>
+                        </div>
+                        
+                        <div id="combinationResult" class="mt-3" style="display: none;">
+                            <div class="alert" role="alert"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Video Clips Gallery -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0">Your Video Clips</h2>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="refreshClips">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="clipGallery">
+                            {% if clips %}
+                                {% for clip in clips %}
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card h-100">
+                                        <div class="video-container">
+                                            <video controls preload="metadata">
+                                                <source src="/clips/{{ clip.filename }}" type="video/mp4">
+                                                Your browser does not support the video tag.
+                                            </video>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="mb-1"><strong>Created:</strong> {{ clip.created }}</p>
+                                            <p class="mb-2"><strong>Prompt:</strong> {{ clip.prompt }}</p>
+                                            <div class="d-flex justify-content-between">
+                                                <a href="/clips/{{ clip.filename }}" class="btn btn-sm btn-outline-primary" download>
+                                                    <i class="fas fa-download"></i> Download
+                                                </a>
+                                                <button class="btn btn-sm btn-outline-danger delete-clip" data-filename="{{ clip.filename }}">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="col-12">
+                                    <p class="text-center text-muted">No clips available. Generate some clips using the form above!</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Movies Gallery -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0">Your Movies</h2>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="refreshMovies">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="movieGallery">
+                            {% if movies %}
+                                {% for movie in movies %}
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="video-container">
+                                            <video controls preload="metadata">
+                                                <source src="/movies/{{ movie.filename }}" type="video/mp4">
+                                                Your browser does not support the video tag.
+                                            </video>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="mb-1"><strong>Created:</strong> {{ movie.created }}</p>
+                                            <p class="mb-2"><strong>Filename:</strong> {{ movie.filename }}</p>
+                                            <div class="d-flex justify-content-between">
+                                                <a href="/movies/{{ movie.filename }}" class="btn btn-sm btn-outline-primary" download>
+                                                    <i class="fas fa-download"></i> Download
+                                                </a>
+                                                <button class="btn btn-sm btn-outline-danger delete-movie" data-filename="{{ movie.filename }}">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="col-12">
+                                    <p class="text-center text-muted">No movies available. Combine some clips using the form above!</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery (required for AJAX) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Handler for generating videos
+            $('#generateForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                // Show loading indicator
+                $('#generationLoading').show();
+                $('#generationResult').hide();
+                
+                // Simulate progress bar for long operation
+                let progress = 0;
+                const progressInterval = setInterval(function() {
+                    progress += 0.5;  // increment by 0.5% every second (roughly 20 min total)
+                    if (progress > 100) progress = 99;  // don't reach 100% until done
+                    $('.progress-bar').css('width', progress + '%');
+                }, 1000);
+                
+                // Submit the form using AJAX
+                $.ajax({
+                    url: '/generate',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        clearInterval(progressInterval);
+                        $('.progress-bar').css('width', '100%');
+                        
+                        setTimeout(function() {
+                            $('#generationLoading').hide();
+                            $('#generationResult').show();
+                            
+                            if (response.status === 'success') {
+                                $('#generationResult .alert')
+                                    .removeClass('alert-danger')
+                                    .addClass('alert-success')
+                                    .html(`
+                                        <h5>Success!</h5>
+                                        <p>${response.message}</p>
+                                        <p>Refreshing clips gallery...</p>
+                                    `);
+                                    
+                                // Refresh the page after 2 seconds to show the new clip
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 2000);
+                            } else {
+                                $('#generationResult .alert')
+                                    .removeClass('alert-success')
+                                    .addClass('alert-danger')
+                                    .html(`
+                                        <h5>Error</h5>
+                                        <p>${response.message}</p>
+                                    `);
+                            }
+                        }, 1000);
+                    },
+                    error: function(xhr, status, error) {
+                        clearInterval(progressInterval);
+                        
+                        $('#generationLoading').hide();
+                        $('#generationResult').show();
+                        $('#generationResult .alert')
+                            .removeClass('alert-success')
+                            .addClass('alert-danger')
+                            .html(`
+                                <h5>Error</h5>
+                                <p>An unexpected error occurred. Please try again.</p>
+                                <p>Details: ${error}</p>
+                            `);
+                    }
+                });
+            });
+            
+            // Handler for combining videos
+            $('#combineForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                // Check if at least one clip is selected
+                if ($('input[name="clips"]:checked').length === 0) {
+                    alert('Please select at least one clip to combine.');
+                    return;
+                }
+                
+                // Show loading indicator
+                $('#combinationLoading').show();
+                $('#combinationResult').hide();
+                
+                // Submit the form using AJAX
+                $.ajax({
+                    url: '/combine',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        $('#combinationLoading').hide();
+                        $('#combinationResult').show();
+                        
+                        if (response.status === 'success') {
+                            $('#combinationResult .alert')
+                                .removeClass('alert-danger')
+                                .addClass('alert-success')
+                                .html(`
+                                    <h5>Success!</h5>
+                                    <p>${response.message}</p>
+                                    <p>Refreshing movies gallery...</p>
+                                `);
+                                
+                            // Refresh the page after 2 seconds
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            $('#combinationResult .alert')
+                                .removeClass('alert-success')
+                                .addClass('alert-danger')
+                                .html(`
+                                    <h5>Error</h5>
+                                    <p>${response.message}</p>
+                                `);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $('#combinationLoading').hide();
+                        $('#combinationResult').show();
+                        $('#combinationResult .alert')
+                            .removeClass('alert-success')
+                            .addClass('alert-danger')
+                            .html(`
+                                <h5>Error</h5>
+                                <p>An unexpected error occurred. Please try again.</p>
+                                <p>Details: ${error}</p>
+                            `);
+                    }
+                });
+            });
+            
+            // Delete clip handler
+            $('.delete-clip').on('click', function() {
+                const filename = $(this).data('filename');
+                if (confirm(`Are you sure you want to delete the clip "${filename}"?`)) {
+                    $.ajax({
+                        url: `/delete_clip/${filename}`,
+                        type: 'POST',
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                alert(response.message);
+                                window.location.reload();
+                            } else {
+                                alert(`Error: ${response.message}`);
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Delete movie handler
+            $('.delete-movie').on('click', function() {
+                const filename = $(this).data('filename');
+                if (confirm(`Are you sure you want to delete the movie "${filename}"?`)) {
+                    $.ajax({
+                        url: `/delete_movie/${filename}`,
+                        type: 'POST',
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                alert(response.message);
+                                window.location.reload();
+                            } else {
+                                alert(`Error: ${response.message}`);
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Refresh buttons
+            $('#refreshClips, #refreshMovies').on('click', function() {
+                window.location.reload();
+            });
+        });
+    </script>
+</body>
+</html> 
