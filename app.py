@@ -10,9 +10,13 @@ import uuid
 import logging
 import argparse
 import subprocess
+import random
 from datetime import datetime
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for
+
+# Import the TemplateEnhancer from enhance_prompts.py
+from enhance_prompts import TemplateEnhancer
 
 # Configure logging
 logging.basicConfig(
@@ -38,6 +42,9 @@ os.makedirs(MOVIE_DIR, exist_ok=True)
 WAN_REPO_PATH = os.path.join(os.path.expanduser("~"), "development", "wan-video", "wan2.1", "wan_repo")
 MODEL_DIR = os.path.join(os.path.expanduser("~"), "development", "wan-video", "wan2.1", "models", "Wan2.1-T2V-1.3B")
 VENV_PATH = os.path.join(os.path.expanduser("~"), "development", "wan-video", "wan2.1", "venv")
+
+# Initialize the prompt enhancer
+prompt_enhancer = TemplateEnhancer()
 
 def activate_venv():
     """Activate the virtual environment for the current process."""
@@ -190,100 +197,152 @@ def combine_videos(clip_paths, output_path):
 
 @app.route('/')
 def index():
-    """Homepage with interface for generating and combining videos."""
-    # Get list of all clips
+    """Render the main page."""
+    # Get all clips
     clips = []
-    for filename in os.listdir(CLIP_DIR):
-        if filename.endswith(".mp4"):
-            file_path = os.path.join(CLIP_DIR, filename)
-            creation_time = os.path.getctime(file_path)
-            creation_datetime = datetime.fromtimestamp(creation_time).strftime('%Y-%m-%d %H:%M:%S')
-            
-            # Extract prompt from filename if available
-            parts = filename.split("_", 1)
-            prompt = parts[1].replace(".mp4", "").replace("_", " ") if len(parts) > 1 else "Unknown"
-            
-            clips.append({
-                "filename": filename,
-                "path": file_path,
-                "created": creation_datetime,
-                "prompt": prompt
-            })
+    if os.path.exists(CLIP_DIR):
+        for filename in os.listdir(CLIP_DIR):
+            if filename.endswith('.mp4'):
+                # Extract the prompt from the filename
+                parts = filename.split('_', 1)
+                if len(parts) > 1:
+                    timestamp = parts[0]
+                    prompt = parts[1].replace('.mp4', '').replace('_', ' ')
+                else:
+                    timestamp = ''
+                    prompt = filename
+                
+                # Get file creation time
+                file_path = os.path.join(CLIP_DIR, filename)
+                created = datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
+                
+                clips.append({
+                    'filename': filename,
+                    'prompt': prompt,
+                    'created': created
+                })
     
-    # Get list of all movies
+    # Sort clips by creation time (newest first)
+    clips.sort(key=lambda x: x['created'], reverse=True)
+    
+    # Get all movies
     movies = []
-    for filename in os.listdir(MOVIE_DIR):
-        if filename.endswith(".mp4"):
-            file_path = os.path.join(MOVIE_DIR, filename)
-            creation_time = os.path.getctime(file_path)
-            creation_datetime = datetime.fromtimestamp(creation_time).strftime('%Y-%m-%d %H:%M:%S')
-            
-            movies.append({
-                "filename": filename,
-                "path": file_path,
-                "created": creation_datetime
-            })
+    if os.path.exists(MOVIE_DIR):
+        for filename in os.listdir(MOVIE_DIR):
+            if filename.endswith('.mp4'):
+                # Extract the title from the filename
+                parts = filename.split('_', 1)
+                if len(parts) > 1:
+                    timestamp = parts[0]
+                    title = parts[1].replace('.mp4', '').replace('_', ' ')
+                else:
+                    timestamp = ''
+                    title = filename
+                
+                # Get file creation time
+                file_path = os.path.join(MOVIE_DIR, filename)
+                created = datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
+                
+                movies.append({
+                    'filename': filename,
+                    'title': title,
+                    'created': created
+                })
     
-    # Sort by creation time (newest first)
-    clips.sort(key=lambda x: x["created"], reverse=True)
-    movies.sort(key=lambda x: x["created"], reverse=True)
+    # Sort movies by creation time (newest first)
+    movies.sort(key=lambda x: x['created'], reverse=True)
     
-    return render_template('index.html', clips=clips, movies=movies)
+    # Get sample enhanced prompts for the help section
+    sample_prompts = [
+        "A red ball bouncing",
+        "A butterfly in a garden",
+        "A car driving on a mountain road"
+    ]
+    sample_enhanced = [enhance_prompt_text(p) for p in sample_prompts]
+    
+    return render_template('index.html', clips=clips, movies=movies, 
+                          sample_prompts=sample_prompts, sample_enhanced=sample_enhanced)
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    """Generate a new video clip."""
+    """Generate a video from a text prompt."""
     prompt = request.form.get('prompt')
+    use_enhanced = request.form.get('use_enhanced', 'false')
+    enhanced_prompt = request.form.get('enhanced_prompt')
     
     if not prompt:
         return jsonify({"status": "error", "message": "Prompt is required"})
     
-    # Create a sanitized filename from the prompt
-    safe_prompt = prompt.replace(" ", "_").replace("/", "_").replace("\\", "_")[:50]
-    clip_filename = f"{int(time.time())}_{safe_prompt}.mp4"
-    clip_path = os.path.join(CLIP_DIR, clip_filename)
+    # Use the enhanced prompt if specified
+    final_prompt = enhanced_prompt if use_enhanced == 'true' and enhanced_prompt else prompt
     
-    # Generate the video
-    success, message = generate_video(prompt, clip_path)
-    
-    if success:
+    try:
+        # Generate a unique filename based on the prompt
+        timestamp = int(time.time())
+        safe_prompt = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in prompt[:50])
+        filename = f"{timestamp}_{safe_prompt}.mp4"
+        output_path = os.path.join(CLIP_DIR, filename)
+        
+        # Generate the video
+        generate_video(final_prompt, output_path)
+        
         return jsonify({
-            "status": "success", 
-            "message": "Video generated successfully", 
-            "clip": clip_filename
+            "status": "success",
+            "message": "Video generated successfully",
+            "clip": filename,
+            "prompt": final_prompt
         })
-    else:
-        return jsonify({"status": "error", "message": f"Error generating video: {message}"})
+    except Exception as e:
+        logger.error(f"Error generating video: {e}")
+        return jsonify({"status": "error", "message": f"Error generating video: {str(e)}"})
 
 @app.route('/combine', methods=['POST'])
 def combine():
-    """Combine multiple video clips into one movie."""
-    # Get selected clips
-    selected_clips = request.form.getlist('clips')
-    movie_title = request.form.get('movie_title', 'Untitled')
+    """Combine multiple video clips into a single movie."""
+    movie_title = request.form.get('movie_title')
+    clip_filenames = request.form.getlist('clips')
     
-    if not selected_clips:
-        return jsonify({"status": "error", "message": "No clips selected"})
+    if not movie_title:
+        return jsonify({"status": "error", "message": "Movie title is required"})
     
-    # Create a sanitized filename for the movie
-    safe_title = movie_title.replace(" ", "_").replace("/", "_").replace("\\", "_")[:50]
-    movie_filename = f"{int(time.time())}_{safe_title}.mp4"
-    movie_path = os.path.join(MOVIE_DIR, movie_filename)
+    if not clip_filenames:
+        return jsonify({"status": "error", "message": "Please select at least one clip to combine"})
     
-    # Get full paths for selected clips
-    clip_paths = [os.path.join(CLIP_DIR, clip) for clip in selected_clips]
-    
-    # Combine the videos
-    success, message = combine_videos(clip_paths, movie_path)
-    
-    if success:
+    try:
+        # Create a sanitized filename from the title
+        safe_title = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in movie_title[:50])
+        timestamp = int(time.time())
+        movie_filename = f"{timestamp}_{safe_title}.mp4"
+        movie_path = os.path.join(MOVIE_DIR, movie_filename)
+        
+        # Get the full paths of the clips
+        clip_paths = [os.path.join(CLIP_DIR, filename) for filename in clip_filenames]
+        
+        # Check if all clips exist
+        missing_clips = [path for path in clip_paths if not os.path.exists(path)]
+        if missing_clips:
+            return jsonify({
+                "status": "error", 
+                "message": f"Some clips were not found: {', '.join(os.path.basename(p) for p in missing_clips)}"
+            })
+        
+        # Calculate total duration
+        total_duration = len(clip_paths) * 10  # Each clip is 10 seconds
+        
+        # Combine the clips
+        combine_videos(clip_paths, movie_path)
+        
         return jsonify({
-            "status": "success", 
-            "message": "Movie created successfully", 
-            "movie": movie_filename
+            "status": "success",
+            "message": f"Movie created successfully! Combined {len(clip_paths)} clips into a {total_duration}-second movie.",
+            "movie": movie_filename,
+            "title": movie_title,
+            "clips_used": len(clip_paths),
+            "duration": total_duration
         })
-    else:
-        return jsonify({"status": "error", "message": f"Error creating movie: {message}"})
+    except Exception as e:
+        logger.error(f"Error combining videos: {e}")
+        return jsonify({"status": "error", "message": f"Error combining videos: {str(e)}"})
 
 @app.route('/clips/<filename>')
 def serve_clip(filename):
@@ -320,6 +379,32 @@ def delete_movie(filename):
             return jsonify({"status": "error", "message": f"Movie {filename} not found"})
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error deleting movie: {str(e)}"})
+
+def enhance_prompt_text(prompt):
+    """Enhance a prompt using the TemplateEnhancer."""
+    try:
+        enhanced_prompt = prompt_enhancer.enhance_prompt(prompt)
+        logger.info(f"Enhanced prompt: {enhanced_prompt}")
+        return enhanced_prompt
+    except Exception as e:
+        logger.error(f"Error enhancing prompt: {e}")
+        return prompt  # Return original prompt if enhancement fails
+
+@app.route('/enhance_prompt', methods=['POST'])
+def enhance_prompt():
+    """Enhance a prompt using the TemplateEnhancer."""
+    prompt = request.form.get('prompt')
+    
+    if not prompt:
+        return jsonify({"status": "error", "message": "Prompt is required"})
+    
+    enhanced_prompt = enhance_prompt_text(prompt)
+    
+    return jsonify({
+        "status": "success",
+        "message": "Prompt enhanced successfully",
+        "enhanced_prompt": enhanced_prompt
+    })
 
 if __name__ == '__main__':
     # Parse command line arguments

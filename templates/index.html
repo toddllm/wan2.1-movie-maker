@@ -98,6 +98,22 @@
                                 <div class="form-text">Be creative with your description. The more detailed, the better!</div>
                             </div>
                             
+                            <div class="mb-3">
+                                <button type="button" id="enhancePromptBtn" class="btn btn-secondary">Enhance Prompt</button>
+                                <div class="form-text">Click to add details about colors, textures, lighting, camera angles, and movement.</div>
+                            </div>
+                            
+                            <div id="enhancedPromptContainer" class="mb-3" style="display: none;">
+                                <label for="enhancedPrompt" class="form-label">Enhanced Prompt</label>
+                                <textarea class="form-control" id="enhancedPrompt" name="enhanced_prompt" rows="5" readonly></textarea>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="useEnhanced" name="use_enhanced" value="true" checked>
+                                    <label class="form-check-label" for="useEnhanced">
+                                        Use enhanced prompt for video generation
+                                    </label>
+                                </div>
+                            </div>
+                            
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary">Generate Video</button>
                             </div>
@@ -118,6 +134,33 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Prompt Enhancement Help -->
+                <div class="card mt-3">
+                    <div class="card-header bg-info text-white">
+                        <h3 class="mb-0">About Prompt Enhancement</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>Enhancing your prompts adds details about:</p>
+                        <ul>
+                            <li><strong>Visual elements:</strong> colors, textures, materials</li>
+                            <li><strong>Lighting conditions:</strong> natural light, golden hour, etc.</li>
+                            <li><strong>Camera angles:</strong> close-up, wide angle, tracking shot</li>
+                            <li><strong>Movement:</strong> how things change over time</li>
+                            <li><strong>Background:</strong> setting and environment details</li>
+                        </ul>
+                        
+                        <h5>Examples:</h5>
+                        <div class="mb-2">
+                            <strong>Original:</strong> <span class="text-muted">{{ sample_prompts[0] }}</span><br>
+                            <strong>Enhanced:</strong> <span class="text-success">{{ sample_enhanced[0] }}</span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Original:</strong> <span class="text-muted">{{ sample_prompts[1] }}</span><br>
+                            <strong>Enhanced:</strong> <span class="text-success">{{ sample_enhanced[1] }}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Video Combination Form -->
@@ -135,11 +178,21 @@
                             
                             <div class="mb-3">
                                 <label class="form-label">Select Clips to Combine</label>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> Each clip is 10 seconds long. Select multiple clips to create a longer movie.
+                                </div>
                                 <div class="clip-selection p-2 border rounded">
                                     {% if clips %}
+                                        <div class="d-flex justify-content-between mb-2 px-2">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllClips">Select All</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllClips">Deselect All</button>
+                                        </div>
+                                        <div id="selectedSummary" class="alert alert-success" style="display: none;">
+                                            <span id="selectedCount">0</span> clips selected (<span id="totalDuration">0</span> seconds total)
+                                        </div>
                                         {% for clip in clips %}
                                             <div class="form-check clip-item">
-                                                <input class="form-check-input" type="checkbox" name="clips" value="{{ clip.filename }}" id="clip{{ loop.index }}">
+                                                <input class="form-check-input clip-checkbox" type="checkbox" name="clips" value="{{ clip.filename }}" id="clip{{ loop.index }}">
                                                 <label class="form-check-label" for="clip{{ loop.index }}">
                                                     {{ clip.created }} 
                                                     <span class="ms-2 prompt-badge" title="{{ clip.prompt }}">
@@ -168,6 +221,26 @@
                         
                         <div id="combinationResult" class="mt-3" style="display: none;">
                             <div class="alert" role="alert"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Movie Creation Help -->
+                <div class="card mt-3">
+                    <div class="card-header bg-success text-white">
+                        <h3 class="mb-0">About Movie Creation</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>The movie creation process:</p>
+                        <ol>
+                            <li>Select the clips you want to include</li>
+                            <li>The clips will be combined in the order they appear in the list (newest first)</li>
+                            <li>Each clip is 10 seconds long</li>
+                            <li>The final movie will be the combined length of all selected clips</li>
+                            <li>FFmpeg is used to combine the clips seamlessly</li>
+                        </ol>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Once created, movies cannot be re-ordered or edited. To change the order, delete the movie and create a new one.
                         </div>
                     </div>
                 </div>
@@ -278,6 +351,68 @@
     
     <script>
         $(document).ready(function() {
+            // Prompt enhancement functionality
+            $('#enhancePromptBtn').on('click', function() {
+                const prompt = $('#prompt').val().trim();
+                
+                if (!prompt) {
+                    alert('Please enter a prompt to enhance.');
+                    return;
+                }
+                
+                // Show loading state
+                $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enhancing...');
+                
+                // Call the enhance_prompt endpoint
+                $.ajax({
+                    url: '/enhance_prompt',
+                    type: 'POST',
+                    data: { prompt: prompt },
+                    success: function(response) {
+                        $('#enhancePromptBtn').prop('disabled', false).text('Enhance Prompt');
+                        
+                        if (response.status === 'success') {
+                            $('#enhancedPrompt').val(response.enhanced_prompt);
+                            $('#enhancedPromptContainer').slideDown();
+                        } else {
+                            alert('Error enhancing prompt: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $('#enhancePromptBtn').prop('disabled', false).text('Enhance Prompt');
+                        alert('Error enhancing prompt: ' + error);
+                    }
+                });
+            });
+            
+            // Clip selection functionality
+            $('.clip-checkbox').on('change', function() {
+                updateSelectedSummary();
+            });
+            
+            $('#selectAllClips').on('click', function() {
+                $('.clip-checkbox').prop('checked', true);
+                updateSelectedSummary();
+            });
+            
+            $('#deselectAllClips').on('click', function() {
+                $('.clip-checkbox').prop('checked', false);
+                updateSelectedSummary();
+            });
+            
+            function updateSelectedSummary() {
+                const selectedCount = $('.clip-checkbox:checked').length;
+                const totalDuration = selectedCount * 10; // Each clip is 10 seconds
+                
+                if (selectedCount > 0) {
+                    $('#selectedCount').text(selectedCount);
+                    $('#totalDuration').text(totalDuration);
+                    $('#selectedSummary').show();
+                } else {
+                    $('#selectedSummary').hide();
+                }
+            }
+            
             // Handler for generating videos
             $('#generateForm').on('submit', function(e) {
                 e.preventDefault();
@@ -314,6 +449,7 @@
                                     .html(`
                                         <h5>Success!</h5>
                                         <p>${response.message}</p>
+                                        <p>Prompt used: <strong>${response.prompt}</strong></p>
                                         <p>Refreshing clips gallery...</p>
                                     `);
                                     
@@ -379,6 +515,9 @@
                                 .html(`
                                     <h5>Success!</h5>
                                     <p>${response.message}</p>
+                                    <p>Title: <strong>${response.title}</strong></p>
+                                    <p>Clips used: ${response.clips_used}</p>
+                                    <p>Duration: ${response.duration} seconds</p>
                                     <p>Refreshing movies gallery...</p>
                                 `);
                                 
