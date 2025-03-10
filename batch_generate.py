@@ -40,12 +40,13 @@ def check_gpu_usage():
             capture_output=True, text=True
         )
         
+        # Only consider GPU in use if there's an actual generate.py process running
         if "generate.py" in result.stdout:
             return True, memory_used
         
-        # If memory usage is high but no generate.py process, something else might be using the GPU
-        # Increased threshold from 1000 to 100MB to ignore baseline memory allocation
-        if memory_used > 100:
+        # Ignore baseline memory allocation completely
+        # Only consider very high memory usage (>5GB) without a generate.py process
+        if memory_used > 5000:
             return True, memory_used
             
         return False, memory_used

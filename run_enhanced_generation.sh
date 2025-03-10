@@ -61,15 +61,28 @@ fi
 
 # Check if GPU is already in use
 if command -v nvidia-smi &> /dev/null; then
-    GPU_USAGE=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | awk '{print $1}')
-    if [ "$GPU_USAGE" -gt 100 ] && [ "$FORCE" = false ]; then
-        echo "Warning: GPU is already in use (${GPU_USAGE}MB used)."
-        echo "This might be another video generation in progress."
+    # Check if a generation process is already running
+    if ps -ef | grep -q "[g]enerate.py"; then
+        echo "Warning: Another video generation process is already running."
         echo "Options:"
         echo "  1. Wait for the current process to complete"
         echo "  2. Run with --force to proceed anyway (may cause errors)"
         echo "  3. Kill the current process with: kill \$(ps -ef | grep 'generate.py' | grep -v grep | awk '{print \$2}')"
-        exit 1
+        
+        if [ "$FORCE" = false ]; then
+            exit 1
+        else
+            echo "Proceeding anyway as --force was specified."
+        fi
+    else
+        # Check for very high GPU memory usage (>5GB) without a generate.py process
+        GPU_USAGE=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | awk '{print $1}')
+        if [ "$GPU_USAGE" -gt 5000 ] && [ "$FORCE" = false ]; then
+            echo "Warning: GPU has high memory usage (${GPU_USAGE}MB) but no generate.py process was found."
+            echo "Another application might be using the GPU."
+            echo "Run with --force to proceed anyway."
+            exit 1
+        fi
     fi
 fi
 
