@@ -355,10 +355,15 @@
                             {% if clips %}
                                 {% for clip in clips %}
                                 <div class="col-md-6 col-lg-4 mb-4">
-                                    <div class="card h-100">
+                                    <div class="card h-100 {% if clip.is_chelsea %}border-primary{% endif %}">
+                                        {% if clip.is_chelsea %}
+                                        <div class="card-header bg-primary text-white">
+                                            <strong>Chelsea's Clip</strong>
+                                        </div>
+                                        {% endif %}
                                         <div class="video-container">
                                             <video controls preload="metadata">
-                                                <source src="{{ '/chelsea/clips/' if is_chelsea else '/clips/' }}{{ clip.filename }}" type="video/mp4">
+                                                <source src="{{ '/chelsea/clips/' if clip.is_chelsea or is_chelsea else '/clips/' }}{{ clip.filename }}" type="video/mp4">
                                                 Your browser does not support the video tag.
                                             </video>
                                         </div>
@@ -366,12 +371,18 @@
                                             <p class="mb-1"><strong>Created:</strong> {{ clip.created }}</p>
                                             <p class="mb-2"><strong>Prompt:</strong> {{ clip.prompt }}</p>
                                             <div class="d-flex justify-content-between">
-                                                <a href="{{ '/chelsea/clips/' if is_chelsea else '/clips/' }}{{ clip.filename }}" class="btn btn-sm btn-outline-primary" download>
+                                                <a href="{{ '/chelsea/clips/' if clip.is_chelsea or is_chelsea else '/clips/' }}{{ clip.filename }}" class="btn btn-sm btn-outline-primary" download>
                                                     <i class="fas fa-download"></i> Download
                                                 </a>
-                                                <button class="btn btn-sm btn-outline-danger delete-clip" data-filename="{{ clip.filename }}">
+                                                {% if not is_chelsea and clip.is_chelsea %}
+                                                <a href="/chelsea" class="btn btn-sm btn-outline-info">
+                                                    <i class="fas fa-external-link-alt"></i> View in Chelsea's Page
+                                                </a>
+                                                {% else %}
+                                                <button class="btn btn-sm btn-outline-danger delete-clip" data-filename="{{ clip.filename }}" data-is-chelsea="{{ 'true' if clip.is_chelsea else 'false' }}">
                                                     <i class="fas fa-trash"></i> Delete
                                                 </button>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
@@ -403,7 +414,12 @@
                             {% if movies %}
                                 {% for movie in movies %}
                                 <div class="col-md-6 mb-4">
-                                    <div class="card h-100">
+                                    <div class="card h-100 {% if movie.is_chelsea %}border-primary{% endif %}">
+                                        {% if movie.is_chelsea %}
+                                        <div class="card-header bg-primary text-white">
+                                            <strong>Chelsea's Movie</strong>
+                                        </div>
+                                        {% endif %}
                                         <div class="video-container">
                                             <video controls preload="metadata">
                                                 <source src="/movies/{{ movie.filename }}" type="video/mp4">
@@ -443,20 +459,19 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     
     <script>
-        $(document).ready(function() {
+        document.addEventListener('DOMContentLoaded', function() {
             // Set the correct form action URLs based on the page
-            var isChelsea = {{ 'true' if is_chelsea else 'false' }};
+            var isChelsea = {% if is_chelsea %}true{% else %}false{% endif %};
             var generateUrl = isChelsea ? '/chelsea/generate' : '/generate';
             var combineUrl = isChelsea ? '/chelsea/combine' : '/combine';
             var enhanceUrl = isChelsea ? '/chelsea/enhance_prompt' : '/enhance_prompt';
-            var deleteClipUrl = isChelsea ? '/chelsea/delete_clip/' : '/delete_clip/';
             
-            $('#generateForm').attr('action', generateUrl);
-            $('#combineForm').attr('action', combineUrl);
+            document.getElementById('generateForm').setAttribute('action', generateUrl);
+            document.getElementById('combineForm').setAttribute('action', combineUrl);
             
             // Prompt enhancement functionality
-            $('#enhancePromptBtn').on('click', function() {
-                const prompt = $('#prompt').val().trim();
+            document.getElementById('enhancePromptBtn').addEventListener('click', function() {
+                const prompt = document.getElementById('prompt').value.trim();
                 
                 if (!prompt) {
                     alert('Please enter a prompt to enhance.');
@@ -464,235 +479,257 @@
                 }
                 
                 // Show loading state
-                $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enhancing...');
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enhancing...';
                 
                 // Call the enhance_prompt endpoint
-                $.ajax({
-                    url: enhanceUrl,
-                    type: 'POST',
-                    data: { prompt: prompt },
-                    success: function(response) {
-                        $('#enhancePromptBtn').prop('disabled', false).text('Enhance Prompt');
-                        
-                        if (response.status === 'success') {
-                            $('#enhancedPrompt').val(response.enhanced_prompt);
-                            $('#enhancedPromptContainer').slideDown();
-                        } else {
-                            alert('Error enhancing prompt: ' + response.message);
-                        }
+                fetch(enhanceUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    error: function(xhr, status, error) {
-                        $('#enhancePromptBtn').prop('disabled', false).text('Enhance Prompt');
-                        alert('Error enhancing prompt: ' + error);
+                    body: 'prompt=' + encodeURIComponent(prompt)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('enhancePromptBtn').disabled = false;
+                    document.getElementById('enhancePromptBtn').textContent = 'Enhance Prompt';
+                    
+                    if (data.status === 'success') {
+                        document.getElementById('enhancedPrompt').value = data.enhanced_prompt;
+                        document.getElementById('enhancedPromptContainer').style.display = 'block';
+                    } else {
+                        alert('Error enhancing prompt: ' + data.message);
                     }
+                })
+                .catch(error => {
+                    document.getElementById('enhancePromptBtn').disabled = false;
+                    document.getElementById('enhancePromptBtn').textContent = 'Enhance Prompt';
+                    alert('Error enhancing prompt: ' + error);
                 });
             });
             
             // Clip selection functionality
-            $('.clip-checkbox').on('change', function() {
+            document.querySelectorAll('.clip-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', updateSelectedSummary);
+            });
+            
+            document.getElementById('selectAllClips').addEventListener('click', function() {
+                document.querySelectorAll('.clip-checkbox').forEach(checkbox => {
+                    checkbox.checked = true;
+                });
                 updateSelectedSummary();
             });
             
-            $('#selectAllClips').on('click', function() {
-                $('.clip-checkbox').prop('checked', true);
-                updateSelectedSummary();
-            });
-            
-            $('#deselectAllClips').on('click', function() {
-                $('.clip-checkbox').prop('checked', false);
+            document.getElementById('deselectAllClips').addEventListener('click', function() {
+                document.querySelectorAll('.clip-checkbox').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
                 updateSelectedSummary();
             });
             
             function updateSelectedSummary() {
-                const selectedCount = $('.clip-checkbox:checked').length;
+                const selectedCount = document.querySelectorAll('.clip-checkbox:checked').length;
                 const totalDuration = selectedCount * 10; // Each clip is 10 seconds
                 
                 if (selectedCount > 0) {
-                    $('#selectedCount').text(selectedCount);
-                    $('#totalDuration').text(totalDuration);
-                    $('#selectedSummary').show();
+                    document.getElementById('selectedCount').textContent = selectedCount;
+                    document.getElementById('totalDuration').textContent = totalDuration;
+                    document.getElementById('selectedSummary').style.display = 'block';
                 } else {
-                    $('#selectedSummary').hide();
+                    document.getElementById('selectedSummary').style.display = 'none';
                 }
             }
             
             // Handler for generating videos
-            $('#generateForm').on('submit', function(e) {
+            document.getElementById('generateForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
                 // Show loading indicator
-                $('#generationLoading').show();
-                $('#generationResult').hide();
+                document.getElementById('generationLoading').style.display = 'block';
+                document.getElementById('generationResult').style.display = 'none';
                 
                 // Simulate progress bar for long operation
                 let progress = 0;
+                const progressBar = document.querySelector('.progress-bar');
                 const progressInterval = setInterval(function() {
                     progress += 0.5;  // increment by 0.5% every second (roughly 20 min total)
                     if (progress > 100) progress = 99;  // don't reach 100% until done
-                    $('.progress-bar').css('width', progress + '%');
+                    progressBar.style.width = progress + '%';
                 }, 1000);
                 
-                // Submit the form using AJAX
-                $.ajax({
-                    url: $(this).attr('action'),
-                    type: 'POST',
-                    data: $(this).serialize(),
-                    success: function(response) {
-                        clearInterval(progressInterval);
-                        $('.progress-bar').css('width', '100%');
+                // Submit the form using fetch
+                const formData = new FormData(this);
+                fetch(this.getAttribute('action'), {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    clearInterval(progressInterval);
+                    progressBar.style.width = '100%';
+                    
+                    setTimeout(function() {
+                        document.getElementById('generationLoading').style.display = 'none';
+                        document.getElementById('generationResult').style.display = 'block';
+                        const alertElement = document.querySelector('#generationResult .alert');
                         
-                        setTimeout(function() {
-                            $('#generationLoading').hide();
-                            $('#generationResult').show();
+                        if (data.status === 'success') {
+                            alertElement.classList.remove('alert-danger');
+                            alertElement.classList.add('alert-success');
+                            alertElement.innerHTML = `
+                                <h5>Success!</h5>
+                                <p>${data.message}</p>
+                                <p>Prompt used: <strong>${data.prompt}</strong></p>
+                                <p>Refreshing clips gallery...</p>
+                            `;
                             
-                            if (response.status === 'success') {
-                                $('#generationResult .alert')
-                                    .removeClass('alert-danger')
-                                    .addClass('alert-success')
-                                    .html(`
-                                        <h5>Success!</h5>
-                                        <p>${response.message}</p>
-                                        <p>Prompt used: <strong>${response.prompt}</strong></p>
-                                        <p>Refreshing clips gallery...</p>
-                                    `);
-                                    
-                                // Refresh the page after 2 seconds to show the new clip
-                                setTimeout(function() {
-                                    window.location.reload();
-                                }, 2000);
-                            } else {
-                                $('#generationResult .alert')
-                                    .removeClass('alert-success')
-                                    .addClass('alert-danger')
-                                    .html(`
-                                        <h5>Error</h5>
-                                        <p>${response.message}</p>
-                                    `);
-                            }
-                        }, 1000);
-                    },
-                    error: function(xhr, status, error) {
-                        clearInterval(progressInterval);
-                        
-                        $('#generationLoading').hide();
-                        $('#generationResult').show();
-                        $('#generationResult .alert')
-                            .removeClass('alert-success')
-                            .addClass('alert-danger')
-                            .html(`
+                            // Refresh the page after 2 seconds to show the new clip
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            alertElement.classList.remove('alert-success');
+                            alertElement.classList.add('alert-danger');
+                            alertElement.innerHTML = `
                                 <h5>Error</h5>
-                                <p>An unexpected error occurred. Please try again.</p>
-                                <p>Details: ${error}</p>
-                            `);
-                    }
+                                <p>${data.message}</p>
+                            `;
+                        }
+                    }, 1000);
+                })
+                .catch(error => {
+                    clearInterval(progressInterval);
+                    
+                    document.getElementById('generationLoading').style.display = 'none';
+                    document.getElementById('generationResult').style.display = 'block';
+                    const alertElement = document.querySelector('#generationResult .alert');
+                    alertElement.classList.remove('alert-success');
+                    alertElement.classList.add('alert-danger');
+                    alertElement.innerHTML = `
+                        <h5>Error</h5>
+                        <p>An unexpected error occurred. Please try again.</p>
+                        <p>Details: ${error}</p>
+                    `;
                 });
             });
             
             // Handler for combining videos
-            $('#combineForm').on('submit', function(e) {
+            document.getElementById('combineForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
                 // Check if at least one clip is selected
-                if ($('input[name="clips"]:checked').length === 0) {
+                if (document.querySelectorAll('input[name="clips"]:checked').length === 0) {
                     alert('Please select at least one clip to combine.');
                     return;
                 }
                 
                 // Show loading indicator
-                $('#combinationLoading').show();
-                $('#combinationResult').hide();
+                document.getElementById('combinationLoading').style.display = 'block';
+                document.getElementById('combinationResult').style.display = 'none';
                 
-                // Submit the form using AJAX
-                $.ajax({
-                    url: $(this).attr('action'),
-                    type: 'POST',
-                    data: $(this).serialize(),
-                    success: function(response) {
-                        $('#combinationLoading').hide();
-                        $('#combinationResult').show();
+                // Submit the form using fetch
+                const formData = new FormData(this);
+                fetch(this.getAttribute('action'), {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('combinationLoading').style.display = 'none';
+                    document.getElementById('combinationResult').style.display = 'block';
+                    const alertElement = document.querySelector('#combinationResult .alert');
+                    
+                    if (data.status === 'success') {
+                        alertElement.classList.remove('alert-danger');
+                        alertElement.classList.add('alert-success');
+                        alertElement.innerHTML = `
+                            <h5>Success!</h5>
+                            <p>${data.message}</p>
+                            <p>Title: <strong>${data.title}</strong></p>
+                            <p>Clips used: ${data.clips_used}</p>
+                            <p>Duration: ${data.duration} seconds</p>
+                            <p>Refreshing movies gallery...</p>
+                        `;
                         
-                        if (response.status === 'success') {
-                            $('#combinationResult .alert')
-                                .removeClass('alert-danger')
-                                .addClass('alert-success')
-                                .html(`
-                                    <h5>Success!</h5>
-                                    <p>${response.message}</p>
-                                    <p>Title: <strong>${response.title}</strong></p>
-                                    <p>Clips used: ${response.clips_used}</p>
-                                    <p>Duration: ${response.duration} seconds</p>
-                                    <p>Refreshing movies gallery...</p>
-                                `);
-                                
-                            // Refresh the page after 2 seconds
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 2000);
-                        } else {
-                            $('#combinationResult .alert')
-                                .removeClass('alert-success')
-                                .addClass('alert-danger')
-                                .html(`
-                                    <h5>Error</h5>
-                                    <p>${response.message}</p>
-                                `);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        $('#combinationLoading').hide();
-                        $('#combinationResult').show();
-                        $('#combinationResult .alert')
-                            .removeClass('alert-success')
-                            .addClass('alert-danger')
-                            .html(`
-                                <h5>Error</h5>
-                                <p>An unexpected error occurred. Please try again.</p>
-                                <p>Details: ${error}</p>
-                            `);
+                        // Refresh the page after 2 seconds
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        alertElement.classList.remove('alert-success');
+                        alertElement.classList.add('alert-danger');
+                        alertElement.innerHTML = `
+                            <h5>Error</h5>
+                            <p>${data.message}</p>
+                        `;
                     }
+                })
+                .catch(error => {
+                    document.getElementById('combinationLoading').style.display = 'none';
+                    document.getElementById('combinationResult').style.display = 'block';
+                    const alertElement = document.querySelector('#combinationResult .alert');
+                    alertElement.classList.remove('alert-success');
+                    alertElement.classList.add('alert-danger');
+                    alertElement.innerHTML = `
+                        <h5>Error</h5>
+                        <p>An unexpected error occurred. Please try again.</p>
+                        <p>Details: ${error}</p>
+                    `;
                 });
             });
             
             // Delete clip handler
-            $('.delete-clip').on('click', function() {
-                const filename = $(this).data('filename');
-                if (confirm(`Are you sure you want to delete the clip "${filename}"?`)) {
-                    $.ajax({
-                        url: deleteClipUrl + filename,
-                        type: 'POST',
-                        success: function(response) {
-                            if (response.status === 'success') {
-                                alert(response.message);
+            document.querySelectorAll('.delete-clip').forEach(button => {
+                button.addEventListener('click', function() {
+                    const filename = this.getAttribute('data-filename');
+                    const isChelsea = this.getAttribute('data-is-chelsea') === 'true';
+                    const deleteUrl = isChelsea ? '/chelsea/delete_clip/' : '/delete_clip/';
+                    
+                    if (confirm(`Are you sure you want to delete the clip "${filename}"?`)) {
+                        fetch(deleteUrl + filename, {
+                            method: 'POST'
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                alert(data.message);
                                 window.location.reload();
                             } else {
-                                alert(`Error: ${response.message}`);
+                                alert(`Error: ${data.message}`);
                             }
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             });
             
             // Delete movie handler
-            $('.delete-movie').on('click', function() {
-                const filename = $(this).data('filename');
-                if (confirm(`Are you sure you want to delete the movie "${filename}"?`)) {
-                    $.ajax({
-                        url: `/delete_movie/${filename}`,
-                        type: 'POST',
-                        success: function(response) {
-                            if (response.status === 'success') {
-                                alert(response.message);
+            document.querySelectorAll('.delete-movie').forEach(button => {
+                button.addEventListener('click', function() {
+                    const filename = this.getAttribute('data-filename');
+                    if (confirm(`Are you sure you want to delete the movie "${filename}"?`)) {
+                        fetch(`/delete_movie/${filename}`, {
+                            method: 'POST'
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                alert(data.message);
                                 window.location.reload();
                             } else {
-                                alert(`Error: ${response.message}`);
+                                alert(`Error: ${data.message}`);
                             }
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             });
             
             // Refresh buttons
-            $('#refreshClips, #refreshMovies').on('click', function() {
+            document.getElementById('refreshClips').addEventListener('click', function() {
+                window.location.reload();
+            });
+            
+            document.getElementById('refreshMovies').addEventListener('click', function() {
                 window.location.reload();
             });
         });

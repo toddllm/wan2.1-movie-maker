@@ -221,7 +221,32 @@ def index():
                 clips.append({
                     'filename': filename,
                     'prompt': prompt,
-                    'created': created
+                    'created': created,
+                    'is_chelsea': False
+                })
+    
+    # Also get Chelsea's clips
+    if os.path.exists(CHELSEA_CLIP_DIR):
+        for filename in os.listdir(CHELSEA_CLIP_DIR):
+            if filename.endswith('.mp4'):
+                # Extract the prompt from the filename
+                parts = filename.split('_', 1)
+                if len(parts) > 1:
+                    timestamp = parts[0]
+                    prompt = parts[1].replace('.mp4', '').replace('_', ' ')
+                else:
+                    timestamp = ''
+                    prompt = filename
+                
+                # Get file creation time
+                file_path = os.path.join(CHELSEA_CLIP_DIR, filename)
+                created = datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
+                
+                clips.append({
+                    'filename': filename,
+                    'prompt': prompt,
+                    'created': created,
+                    'is_chelsea': True
                 })
     
     # Sort clips by creation time (newest first)
@@ -245,10 +270,14 @@ def index():
                 file_path = os.path.join(MOVIE_DIR, filename)
                 created = datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
                 
+                # Check if it's a Chelsea movie
+                is_chelsea = 'Chelsea' in title
+                
                 movies.append({
                     'filename': filename,
                     'title': title,
-                    'created': created
+                    'created': created,
+                    'is_chelsea': is_chelsea
                 })
     
     # Sort movies by creation time (newest first)
@@ -263,7 +292,8 @@ def index():
     sample_enhanced = [enhance_prompt_text(p) for p in sample_prompts]
     
     return render_template('index.html', clips=clips, movies=movies, 
-                          sample_prompts=sample_prompts, sample_enhanced=sample_enhanced)
+                          sample_prompts=sample_prompts, sample_enhanced=sample_enhanced,
+                          is_chelsea=False)
 
 @app.route('/generate', methods=['POST'])
 def generate():
