@@ -34,15 +34,17 @@ def check_gpu_usage():
         
         memory_used = int(result.stdout.strip())
         
-        # Check if a generation process is running
+        # Check if a Wan2.1 generation process is running
+        # Use a more specific command that excludes the grep process itself
         result = subprocess.run(
             ["ps", "-ef"],
             capture_output=True, text=True
         )
         
-        # Only consider GPU in use if there's an actual generate.py process running
-        if "generate.py" in result.stdout:
-            print(f"Found generate.py process with {memory_used}MB GPU memory usage")
+        # Look for actual Wan2.1 generate.py process, not our grep or other processes
+        # The actual process will have "python generate.py --task" in it
+        if "python generate.py --task" in result.stdout:
+            print(f"Found Wan2.1 generate.py process with {memory_used}MB GPU memory usage")
             return True, memory_used
         
         # Ignore baseline memory allocation completely

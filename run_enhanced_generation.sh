@@ -61,13 +61,14 @@ fi
 
 # Check if GPU is already in use
 if command -v nvidia-smi &> /dev/null; then
-    # Check if a generation process is already running
-    if ps -ef | grep -q "[g]enerate.py"; then
-        echo "Warning: Another video generation process is already running."
+    # Check if a Wan2.1 generation process is already running
+    # Use grep -v to exclude the grep process itself
+    if ps -ef | grep "python generate.py --task" | grep -v grep | grep -q .; then
+        echo "Warning: Another Wan2.1 video generation process is already running."
         echo "Options:"
         echo "  1. Wait for the current process to complete"
         echo "  2. Run with --force to proceed anyway (may cause errors)"
-        echo "  3. Kill the current process with: kill \$(ps -ef | grep 'generate.py' | grep -v grep | awk '{print \$2}')"
+        echo "  3. Kill the current process with: kill \$(ps -ef | grep 'generate.py --task' | grep -v grep | awk '{print \$2}')"
         
         if [ "$FORCE" = false ]; then
             exit 1
