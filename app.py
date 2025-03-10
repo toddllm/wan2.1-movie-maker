@@ -35,8 +35,10 @@ app = Flask(__name__)
 # Ensure directories exist
 CLIP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clips")
 MOVIE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "movies")
+CHELSEA_CLIP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chelsea_clips")
 os.makedirs(CLIP_DIR, exist_ok=True)
 os.makedirs(MOVIE_DIR, exist_ok=True)
+os.makedirs(CHELSEA_CLIP_DIR, exist_ok=True)
 
 # Set the WAN2.1 model directory
 WAN_REPO_PATH = os.path.join(os.path.expanduser("~"), "development", "wan-video", "wan2.1", "wan_repo")
@@ -403,6 +405,190 @@ def enhance_prompt():
     return jsonify({
         "status": "success",
         "message": "Prompt enhanced successfully",
+        "enhanced_prompt": enhanced_prompt
+    })
+
+@app.route('/chelsea')
+def chelsea_index():
+    """Render the Chelsea page."""
+    # Get all Chelsea's clips
+    clips = []
+    if os.path.exists(CHELSEA_CLIP_DIR):
+        for filename in os.listdir(CHELSEA_CLIP_DIR):
+            if filename.endswith('.mp4'):
+                # Extract the prompt from the filename
+                parts = filename.split('_', 1)
+                if len(parts) > 1:
+                    timestamp = parts[0]
+                    prompt = parts[1].replace('.mp4', '').replace('_', ' ')
+                else:
+                    timestamp = ''
+                    prompt = filename
+                
+                # Get file creation time
+                file_path = os.path.join(CHELSEA_CLIP_DIR, filename)
+                created = datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
+                
+                clips.append({
+                    'filename': filename,
+                    'prompt': prompt,
+                    'created': created
+                })
+    
+    # Sort clips by creation time (newest first)
+    clips.sort(key=lambda x: x['created'], reverse=True)
+    
+    # Get all movies (same as main page)
+    movies = []
+    if os.path.exists(MOVIE_DIR):
+        for filename in os.listdir(MOVIE_DIR):
+            if filename.endswith('.mp4'):
+                # Extract the title from the filename
+                parts = filename.split('_', 1)
+                if len(parts) > 1:
+                    timestamp = parts[0]
+                    title = parts[1].replace('.mp4', '').replace('_', ' ')
+                else:
+                    timestamp = ''
+                    title = filename
+                
+                # Get file creation time
+                file_path = os.path.join(MOVIE_DIR, filename)
+                created = datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
+                
+                movies.append({
+                    'filename': filename,
+                    'title': title,
+                    'created': created
+                })
+    
+    # Sort movies by creation time (newest first)
+    movies.sort(key=lambda x: x['created'], reverse=True)
+    
+    # Get sample enhanced prompts for the help section
+    sample_prompts = [
+        "A red ball bouncing",
+        "A butterfly in a garden",
+        "A car driving on a mountain road"
+    ]
+    sample_enhanced = [enhance_prompt_text(p) for p in sample_prompts]
+    
+    return render_template('index.html', clips=clips, movies=movies, 
+                          sample_prompts=sample_prompts, sample_enhanced=sample_enhanced,
+                          is_chelsea=True, page_title="Chelsea's Movie Maker")
+
+@app.route('/chelsea/generate', methods=['POST'])
+def chelsea_generate():
+    """Generate a video from a text prompt for Chelsea."""
+    prompt = request.form.get('prompt')
+    use_enhanced = request.form.get('use_enhanced', 'false')
+    enhanced_prompt = request.form.get('enhanced_prompt')
+    
+    if not prompt:
+        return jsonify({"status": "error", "message": "Prompt is required"})
+    
+    # Use the enhanced prompt if specified
+    final_prompt = enhanced_prompt if use_enhanced == 'true' and enhanced_prompt else prompt
+    
+    try:
+        # Generate a unique filename based on the prompt
+        timestamp = int(time.time())
+        safe_prompt = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in prompt[:50])
+        filename = f"{timestamp}_{safe_prompt}.mp4"
+        output_path = os.path.join(CHELSEA_CLIP_DIR, filename)
+        
+        # Generate the video
+        generate_video(final_prompt, output_path)
+        
+        return jsonify({
+            "status": "success",
+            "message": "Video generated successfully for Chelsea",
+            "clip": filename,
+            "prompt": final_prompt
+        })
+    except Exception as e:
+        logger.error(f"Error generating video for Chelsea: {e}")
+        return jsonify({"status": "error", "message": f"Error generating video: {str(e)}"})
+
+@app.route('/chelsea/clips/<filename>')
+def serve_chelsea_clip(filename):
+    """Serve a Chelsea video clip."""
+    return send_from_directory(CHELSEA_CLIP_DIR, filename)
+
+@app.route('/chelsea/delete_clip/<filename>', methods=['POST'])
+def delete_chelsea_clip(filename):
+    """Delete a Chelsea video clip."""
+    try:
+        clip_path = os.path.join(CHELSEA_CLIP_DIR, filename)
+        if os.path.exists(clip_path):
+            os.remove(clip_path)
+            return jsonify({"status": "success", "message": f"Clip {filename} deleted"})
+        else:
+            return jsonify({"status": "error", "message": f"Clip {filename} not found"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Error deleting clip: {str(e)}"})
+
+@app.route('/chelsea/combine', methods=['POST'])
+def chelsea_combine():
+    """Combine multiple Chelsea video clips into a single movie."""
+    movie_title = request.form.get('movie_title')
+    clip_filenames = request.form.getlist('clips')
+    
+    if not movie_title:
+        return jsonify({"status": "error", "message": "Movie title is required"})
+    
+    if not clip_filenames:
+        return jsonify({"status": "error", "message": "Please select at least one clip to combine"})
+    
+    try:
+        # Create a sanitized filename from the title
+        safe_title = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in movie_title[:50])
+        timestamp = int(time.time())
+        movie_filename = f"{timestamp}_Chelsea_{safe_title}.mp4"
+        movie_path = os.path.join(MOVIE_DIR, movie_filename)
+        
+        # Get the full paths of the clips
+        clip_paths = [os.path.join(CHELSEA_CLIP_DIR, filename) for filename in clip_filenames]
+        
+        # Check if all clips exist
+        missing_clips = [path for path in clip_paths if not os.path.exists(path)]
+        if missing_clips:
+            return jsonify({
+                "status": "error", 
+                "message": f"Some clips were not found: {', '.join(os.path.basename(p) for p in missing_clips)}"
+            })
+        
+        # Calculate total duration
+        total_duration = len(clip_paths) * 10  # Each clip is 10 seconds
+        
+        # Combine the clips
+        combine_videos(clip_paths, movie_path)
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Chelsea's movie created successfully! Combined {len(clip_paths)} clips into a {total_duration}-second movie.",
+            "movie": movie_filename,
+            "title": movie_title,
+            "clips_used": len(clip_paths),
+            "duration": total_duration
+        })
+    except Exception as e:
+        logger.error(f"Error combining Chelsea's videos: {e}")
+        return jsonify({"status": "error", "message": f"Error combining videos: {str(e)}"})
+
+@app.route('/chelsea/enhance_prompt', methods=['POST'])
+def chelsea_enhance_prompt():
+    """Enhance a prompt using the TemplateEnhancer for Chelsea."""
+    prompt = request.form.get('prompt')
+    
+    if not prompt:
+        return jsonify({"status": "error", "message": "Prompt is required"})
+    
+    enhanced_prompt = enhance_prompt_text(prompt)
+    
+    return jsonify({
+        "status": "success",
+        "message": "Prompt enhanced successfully for Chelsea",
         "enhanced_prompt": enhanced_prompt
     })
 
