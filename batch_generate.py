@@ -42,13 +42,17 @@ def check_gpu_usage():
         
         # Only consider GPU in use if there's an actual generate.py process running
         if "generate.py" in result.stdout:
+            print(f"Found generate.py process with {memory_used}MB GPU memory usage")
             return True, memory_used
         
         # Ignore baseline memory allocation completely
         # Only consider very high memory usage (>5GB) without a generate.py process
         if memory_used > 5000:
+            print(f"No generate.py process found, but high GPU memory usage: {memory_used}MB")
             return True, memory_used
             
+        # If we get here, GPU is not in use (just baseline memory allocation)
+        print(f"GPU is not in use (baseline memory: {memory_used}MB)")
         return False, memory_used
         
     except Exception as e:
@@ -63,6 +67,7 @@ def wait_for_gpu(max_wait_time=3600, check_interval=30):
         in_use, memory_used = check_gpu_usage()
         
         if not in_use:
+            print("GPU is now free to use.")
             return True
         
         elapsed = time.time() - start_time
@@ -70,7 +75,7 @@ def wait_for_gpu(max_wait_time=3600, check_interval=30):
             print(f"Timeout waiting for GPU to be free after {max_wait_time/60:.1f} minutes.")
             return False
         
-        print(f"GPU is in use ({memory_used}MB). Waiting {check_interval} seconds...")
+        print(f"Waiting {check_interval} seconds for GPU to be free...")
         time.sleep(check_interval)
 
 def generate_video(prompt, server_url, frame_count=160, wait_for_completion=True):
@@ -120,13 +125,15 @@ def process_batch(prompt_file, server_url, frame_count=160, delay=0, wait_for_co
     print(f"Found {len(prompts)} prompts to process.")
     
     # Check if GPU is in use before starting
+    print("Checking GPU status before starting batch processing...")
     in_use, memory_used = check_gpu_usage()
     if in_use:
-        print(f"GPU is currently in use ({memory_used}MB).")
         print("Waiting for GPU to be free before starting batch processing...")
         if not wait_for_gpu():
             print("Timeout waiting for GPU. Exiting.")
             return False
+    else:
+        print("GPU is available for video generation.")
     
     # Process each prompt
     successful = 0
