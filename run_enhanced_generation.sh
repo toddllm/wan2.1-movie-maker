@@ -62,7 +62,7 @@ fi
 # Check if GPU is already in use
 if command -v nvidia-smi &> /dev/null; then
     GPU_USAGE=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | awk '{print $1}')
-    if [ "$GPU_USAGE" -gt 1000 ] && [ "$FORCE" = false ]; then
+    if [ "$GPU_USAGE" -gt 100 ] && [ "$FORCE" = false ]; then
         echo "Warning: GPU is already in use (${GPU_USAGE}MB used)."
         echo "This might be another video generation in progress."
         echo "Options:"
