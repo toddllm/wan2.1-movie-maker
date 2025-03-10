@@ -12,11 +12,37 @@
         body {
             padding-top: 20px;
             padding-bottom: 40px;
-            background-color: #f8f9fa;
+            background-color: #121212;
+            color: #e0e0e0;
         }
         .card {
             margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+        }
+        .card-header {
+            background-color: #2d2d2d;
+            border-bottom: 1px solid #333;
+            color: #e0e0e0;
+        }
+        .card-body {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        .form-control, .form-select {
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            color: #e0e0e0;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #2d2d2d;
+            border-color: #0d6efd;
+            color: #e0e0e0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .form-text {
+            color: #aaa;
         }
         .video-container {
             position: relative;
@@ -45,6 +71,7 @@
             animation: spin 2s linear infinite;
             font-size: 2rem;
             margin-bottom: 10px;
+            color: #0d6efd;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -52,7 +79,8 @@
         }
         .prompt-badge {
             font-size: 0.8rem;
-            background-color: #f0f0f0;
+            background-color: #2d2d2d;
+            color: #e0e0e0;
             padding: 5px 10px;
             border-radius: 20px;
             max-width: 100%;
@@ -61,7 +89,7 @@
             white-space: nowrap;
         }
         .clip-item {
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #333;
             padding: 10px 0;
         }
         .clip-item:last-child {
@@ -70,6 +98,71 @@
         .clip-controls {
             display: flex;
             gap: 5px;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        .btn-success {
+            background-color: #198754;
+            border-color: #198754;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-outline-primary {
+            color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-outline-primary:hover {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+        .bg-light {
+            background-color: #2d2d2d !important;
+            color: #e0e0e0;
+        }
+        .text-muted {
+            color: #aaa !important;
+        }
+        .alert-success {
+            background-color: rgba(25, 135, 84, 0.2);
+            color: #75b798;
+            border-color: #75b798;
+        }
+        .alert-danger {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: #ea868f;
+            border-color: #ea868f;
+        }
+        .alert-info {
+            background-color: rgba(13, 202, 240, 0.2);
+            color: #6edff6;
+            border-color: #6edff6;
+        }
+        .list-group-item {
+            background-color: #1e1e1e;
+            border-color: #333;
+            color: #e0e0e0;
+        }
+        .list-group-item.active {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .modal-content {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        .modal-header {
+            border-bottom: 1px solid #333;
+        }
+        .modal-footer {
+            border-top: 1px solid #333;
         }
     </style>
 </head>
