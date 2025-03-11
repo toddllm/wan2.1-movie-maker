@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R1-V Analysis Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            background-color: #f8f9fa;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: #6c757d;
+            color: white;
+            font-weight: bold;
+        }
+        .analysis-badge {
+            margin-left: 10px;
+        }
+        .video-item {
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .video-item:hover {
+            background-color: #f1f1f1;
+        }
+        .dashboard-header {
+            background-color: #343a40;
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .btn-analyze {
+            margin-top: 20px;
+        }
+        #analysisProgress {
+            display: none;
+            margin-top: 20px;
+        }
+        #analysisResult {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>R1-V Analysis Dashboard</h1>
+            <p class="lead">Enhanced video analysis with R1-V and R1-Omni models</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        Video Analysis
+                    </div>
+                    <div class="card-body">
+                        <form id="analysisForm">
+                            <div class="mb-3">
+                                <label for="videoSelect" class="form-label">Select Video</label>
+                                <select class="form-select" id="videoSelect" name="video_path" required>
+                                    <option value="">-- Select a video --</option>
+                                    <optgroup label="Clips">
+                                        {% for clip in clips %}
+                                        <option value="{{ clip.path }}">{{ clip.filename }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    <optgroup label="Movies">
+                                        {% for movie in movies %}
+                                        <option value="{{ movie.path }}">{{ movie.filename }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="analysisType" class="form-label">Analysis Type</label>
+                                <select class="form-select" id="analysisType" name="analysis_type">
+                                    <option value="both">Complete Analysis (R1-V + Emotion)</option>
+                                    <option value="r1v">Visual Analysis (R1-V only)</option>
+                                    <option value="emotion">Emotion Analysis (R1-Omni only)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="numFrames" class="form-label">Number of Frames</label>
+                                <input type="number" class="form-control" id="numFrames" name="num_frames" value="5" min="1" max="20">
+                                <div class="form-text">More frames = more detailed analysis but slower processing</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="originalPrompt" class="form-label">Original Prompt (optional)</label>
+                                <textarea class="form-control" id="originalPrompt" name="original_prompt" rows="3" placeholder="Enter the original prompt used to generate this video (for better recommendations)"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-analyze">Analyze Video</button>
+                        </form>
+
+                        <div id="analysisProgress">
+                            <div class="alert alert-info">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    <div>
+                                        Analysis in progress... This may take several minutes depending on the video length and analysis type.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="analysisResult" class="alert alert-success">
+                            <h5>Analysis Complete!</h5>
+                            <div id="resultContent"></div>
+                            <a id="viewAnalysisLink" href="#" class="btn btn-sm btn-primary mt-2">View Detailed Analysis</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        Analyzed Videos
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group">
+                            {% for clip in clips %}
+                                {% if clip.has_r1v_analysis or clip.has_emotion_analysis %}
+                                <a href="{{ url_for('r1v.view_analysis', video_path=clip.path) }}" class="list-group-item list-group-item-action video-item">
+                                    {{ clip.filename }}
+                                    {% if clip.has_r1v_analysis %}
+                                    <span class="badge bg-primary analysis-badge">R1-V</span>
+                                    {% endif %}
+                                    {% if clip.has_emotion_analysis %}
+                                    <span class="badge bg-success analysis-badge">Emotion</span>
+                                    {% endif %}
+                                </a>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% for movie in movies %}
+                                {% if movie.has_r1v_analysis or movie.has_emotion_analysis %}
+                                <a href="{{ url_for('r1v.view_analysis', video_path=movie.path) }}" class="list-group-item list-group-item-action video-item">
+                                    {{ movie.filename }}
+                                    {% if movie.has_r1v_analysis %}
+                                    <span class="badge bg-primary analysis-badge">R1-V</span>
+                                    {% endif %}
+                                    {% if movie.has_emotion_analysis %}
+                                    <span class="badge bg-success analysis-badge">Emotion</span>
+                                    {% endif %}
+                                </a>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Model Configuration
+                    </div>
+                    <div class="card-body">
+                        <form id="configForm">
+                            <div class="mb-3">
+                                <label for="r1vModel" class="form-label">R1-V Model</label>
+                                <input type="text" class="form-control" id="r1vModel" name="r1v_model" value="{{ config.r1v_model }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="r1omniModel" class="form-label">R1-Omni Model</label>
+                                <input type="text" class="form-control" id="r1omniModel" name="r1omni_model" value="{{ config.r1omni_model }}">
+                            </div>
+                            <button type="submit" class="btn btn-secondary">Update Configuration</button>
+                        </form>
+                        <div id="configResult" class="alert alert-success mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Analysis form submission
+            const analysisForm = document.getElementById('analysisForm');
+            const analysisProgress = document.getElementById('analysisProgress');
+            const analysisResult = document.getElementById('analysisResult');
+            const resultContent = document.getElementById('resultContent');
+            const viewAnalysisLink = document.getElementById('viewAnalysisLink');
+
+            analysisForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show progress indicator
+                analysisProgress.style.display = 'block';
+                analysisResult.style.display = 'none';
+                
+                // Collect form data
+                const formData = new FormData(analysisForm);
+                
+                // Send analysis request
+                fetch('/r1v/analyze', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide progress indicator
+                    analysisProgress.style.display = 'none';
+                    
+                    if (data.success) {
+                        // Show result
+                        analysisResult.style.display = 'block';
+                        analysisResult.className = 'alert alert-success';
+                        
+                        let resultHtml = '<ul>';
+                        
+                        if (data.results.r1v) {
+                            if (data.results.r1v.success) {
+                                resultHtml += `<li>R1-V Analysis: Success</li>`;
+                            } else {
+                                resultHtml += `<li>R1-V Analysis: Failed - ${data.results.r1v.error}</li>`;
+                            }
+                        }
+                        
+                        if (data.results.emotion) {
+                            if (data.results.emotion.success) {
+                                resultHtml += `<li>Emotion Analysis: Success</li>`;
+                            } else {
+                                resultHtml += `<li>Emotion Analysis: Failed - ${data.results.emotion.error}</li>`;
+                            }
+                        }
+                        
+                        if (data.results.recommendations) {
+                            if (data.results.recommendations.success) {
+                                resultHtml += `<li>Recommendations: Generated successfully</li>`;
+                            } else {
+                                resultHtml += `<li>Recommendations: Failed - ${data.results.recommendations.error}</li>`;
+                            }
+                        }
+                        
+                        resultHtml += '</ul>';
+                        resultContent.innerHTML = resultHtml;
+                        
+                        // Set the view analysis link
+                        const videoPath = formData.get('video_path');
+                        viewAnalysisLink.href = `/r1v/view_analysis/${videoPath}`;
+                    } else {
+                        // Show error
+                        analysisResult.style.display = 'block';
+                        analysisResult.className = 'alert alert-danger';
+                        resultContent.innerHTML = `<p>Error: ${data.error}</p>`;
+                    }
+                })
+                .catch(error => {
+                    // Hide progress indicator
+                    analysisProgress.style.display = 'none';
+                    
+                    // Show error
+                    analysisResult.style.display = 'block';
+                    analysisResult.className = 'alert alert-danger';
+                    resultContent.innerHTML = `<p>Error: ${error.message}</p>`;
+                });
+            });
+            
+            // Configuration form submission
+            const configForm = document.getElementById('configForm');
+            const configResult = document.getElementById('configResult');
+            
+            configForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Collect form data
+                const formData = new FormData(configForm);
+                
+                // Send configuration update request
+                fetch('/r1v/config', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        configResult.style.display = 'block';
+                        configResult.className = 'alert alert-success mt-3';
+                        configResult.textContent = data.message;
+                        
+                        // Hide message after 3 seconds
+                        setTimeout(() => {
+                            configResult.style.display = 'none';
+                        }, 3000);
+                    } else {
+                        // Show error message
+                        configResult.style.display = 'block';
+                        configResult.className = 'alert alert-danger mt-3';
+                        configResult.textContent = `Error: ${data.error}`;
+                    }
+                })
+                .catch(error => {
+                    // Show error message
+                    configResult.style.display = 'block';
+                    configResult.className = 'alert alert-danger mt-3';
+                    configResult.textContent = `Error: ${error.message}`;
+                });
+            });
+        });
+    </script>
+</body>
+</html> 
