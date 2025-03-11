@@ -83,12 +83,13 @@ def install_requirements(model_key):
         logger.error(f"Error installing requirements: {e}")
         return False
 
-def download_model(model_key):
+def download_model(model_key, token=None):
     """
     Download the specified model using the Hugging Face transformers library
     
     Args:
         model_key: Key of the model in the MODELS dictionary
+        token: Hugging Face API token for accessing private or gated models
     
     Returns:
         success: Boolean indicating if download was successful
@@ -108,11 +109,15 @@ def download_model(model_key):
         from transformers import AutoProcessor, AutoModelForCausalLM
         
         # Download model and processor
-        processor = AutoProcessor.from_pretrained(model_info["huggingface_repo"])
+        processor = AutoProcessor.from_pretrained(
+            model_info["huggingface_repo"],
+            token=token
+        )
         model = AutoModelForCausalLM.from_pretrained(
             model_info["huggingface_repo"],
             device_map="auto",
-            torch_dtype="auto"
+            torch_dtype="auto",
+            token=token
         )
         
         # Save model and processor
@@ -126,13 +131,14 @@ def download_model(model_key):
         logger.error(f"Error downloading model: {e}")
         return False, None
 
-def test_model(model_key, model_path):
+def test_model(model_key, model_path, token=None):
     """
     Test the downloaded model with a simple image
     
     Args:
         model_key: Key of the model in the MODELS dictionary
         model_path: Path to the downloaded model
+        token: Hugging Face API token for accessing private or gated models
     
     Returns:
         success: Boolean indicating if test was successful
@@ -156,11 +162,12 @@ def test_model(model_key, model_path):
         Image.new('RGB', (224, 224), color='black').save(test_image_path)
         
         # Load model and processor
-        processor = AutoProcessor.from_pretrained(model_path)
+        processor = AutoProcessor.from_pretrained(model_path, token=token)
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
             device_map="auto",
-            torch_dtype="auto"
+            torch_dtype="auto",
+            token=token
         )
         
         # Load and process the test image
@@ -192,7 +199,7 @@ def test_model(model_key, model_path):
         logger.error(f"Error testing model: {e}")
         return False
 
-def setup_model(model_key):
+def setup_model(model_key, token=None):
     """
     Set up the specified model:
     1. Install requirements
@@ -201,6 +208,7 @@ def setup_model(model_key):
     
     Args:
         model_key: Key of the model in the MODELS dictionary
+        token: Hugging Face API token for accessing private or gated models
     
     Returns:
         success: Boolean indicating if setup was successful
@@ -220,13 +228,13 @@ def setup_model(model_key):
         return False, None
     
     # Step 2: Download model
-    success, model_path = download_model(model_key)
+    success, model_path = download_model(model_key, token)
     if not success:
         logger.error(f"Failed to download {model_info['name']}")
         return False, None
     
     # Step 3: Test model
-    if not test_model(model_key, model_path):
+    if not test_model(model_key, model_path, token):
         logger.warning(f"Failed to test {model_info['name']}, but continuing anyway")
     
     logger.info(f"Successfully set up {model_info['name']} at {model_path}")
@@ -247,6 +255,7 @@ def main():
     parser = argparse.ArgumentParser(description="Set up a vision-language model for evaluation")
     parser.add_argument("--model", "-m", choices=list(MODELS.keys()), help="Model to set up")
     parser.add_argument("--list", "-l", action="store_true", help="List available models")
+    parser.add_argument("--token", "-t", help="Hugging Face API token for accessing private or gated models")
     
     args = parser.parse_args()
     
@@ -257,7 +266,7 @@ def main():
     if not args.model:
         parser.error("Please specify a model to set up using --model")
     
-    setup_model(args.model)
+    setup_model(args.model, args.token)
 
 if __name__ == "__main__":
     main() 
