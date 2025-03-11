@@ -40,8 +40,10 @@ app.secret_key = os.urandom(24)  # For session management
 # Ensure directories exist
 CLIP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clips")
 MOVIE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "movies")
+CHELSEA_CLIP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chelsea_clips")
 os.makedirs(CLIP_DIR, exist_ok=True)
 os.makedirs(MOVIE_DIR, exist_ok=True)
+os.makedirs(CHELSEA_CLIP_DIR, exist_ok=True)
 
 # Set the WAN2.1 model directory
 WAN_REPO_PATH = os.path.join(os.path.expanduser("~"), "development", "wan-video", "wan2.1", "wan_repo")
@@ -298,18 +300,70 @@ def index():
                 'has_analysis': has_analysis,
                 'has_scores': has_scores,
                 'scores': scores,
-                'created': datetime.fromtimestamp(os.path.getmtime(clip_path)).strftime('%Y-%m-%d %H:%M:%S')
+                'created': datetime.fromtimestamp(os.path.getmtime(clip_path)).strftime('%Y-%m-%d %H:%M:%S'),
+                'is_chelsea': False
             })
+    
+    # Also get Chelsea's clips
+    if os.path.exists(CHELSEA_CLIP_DIR):
+        for filename in sorted(os.listdir(CHELSEA_CLIP_DIR), key=lambda x: os.path.getmtime(os.path.join(CHELSEA_CLIP_DIR, x)), reverse=True):
+            if filename.endswith('.mp4'):
+                clip_path = os.path.join(CHELSEA_CLIP_DIR, filename)
+                
+                # Check if this clip has been analyzed
+                analysis_path = os.path.splitext(clip_path)[0] + "_final_analysis.txt"
+                scores_path = os.path.splitext(clip_path)[0] + "_scores.json"
+                
+                has_analysis = os.path.exists(analysis_path)
+                has_scores = os.path.exists(scores_path)
+                
+                # Get scores if available
+                scores = None
+                if has_scores:
+                    try:
+                        with open(scores_path, 'r') as f:
+                            scores = json.load(f)
+                    except Exception as e:
+                        logger.error(f"Error reading scores file {scores_path}: {e}")
+                
+                # Extract prompt from filename
+                prompt = filename.split('_', 1)[1].rsplit('.', 1)[0] if '_' in filename else filename.rsplit('.', 1)[0]
+                
+                clips.append({
+                    'filename': filename,
+                    'path': clip_path,
+                    'prompt': prompt,
+                    'has_analysis': has_analysis,
+                    'has_scores': has_scores,
+                    'scores': scores,
+                    'created': datetime.fromtimestamp(os.path.getmtime(clip_path)).strftime('%Y-%m-%d %H:%M:%S'),
+                    'is_chelsea': True
+                })
     
     # Get all movies
     movies = []
     for filename in sorted(os.listdir(MOVIE_DIR), key=lambda x: os.path.getmtime(os.path.join(MOVIE_DIR, x)), reverse=True):
         if filename.endswith('.mp4'):
             movie_path = os.path.join(MOVIE_DIR, filename)
+            
+            # Extract title from filename
+            parts = filename.split('_', 1)
+            if len(parts) > 1:
+                timestamp = parts[0]
+                title = parts[1].replace('.mp4', '').replace('_', ' ')
+            else:
+                timestamp = ''
+                title = filename
+            
+            # Check if it's a Chelsea movie
+            is_chelsea = 'Chelsea' in title
+            
             movies.append({
                 'filename': filename,
                 'path': movie_path,
-                'created': datetime.fromtimestamp(os.path.getmtime(movie_path)).strftime('%Y-%m-%d %H:%M:%S')
+                'title': title,
+                'created': datetime.fromtimestamp(os.path.getmtime(movie_path)).strftime('%Y-%m-%d %H:%M:%S'),
+                'is_chelsea': is_chelsea
             })
     
     # Get user preferences
@@ -329,7 +383,8 @@ def index():
                           page_title="Movie Maker Beta", 
                           preferences=preferences,
                           sample_prompts=sample_prompts,
-                          sample_enhanced=sample_enhanced)
+                          sample_enhanced=sample_enhanced,
+                          is_chelsea=False)
 
 @app.route('/generate', methods=['POST'])
 def generate():
@@ -479,16 +534,16 @@ def delete_clip(filename):
 @app.route('/delete_movie/<filename>', methods=['POST'])
 def delete_movie(filename):
     """Delete a movie."""
-    movie_path = os.path.join(MOVIE_DIR, filename)
-    
-    if os.path.exists(movie_path):
-        try:
+    try:
+        movie_path = os.path.join(MOVIE_DIR, filename)
+        if os.path.exists(movie_path):
             os.remove(movie_path)
-            return jsonify({'status': 'success', 'message': 'Movie deleted successfully'})
-        except Exception as e:
-            return jsonify({'status': 'error', 'message': f'Error deleting movie: {e}'})
-    else:
-        return jsonify({'status': 'error', 'message': 'Movie not found'})
+            return jsonify({"status": "success", "message": f"Movie {filename} deleted"})
+        else:
+            return jsonify({"status": "error", "message": f"Movie {filename} not found"})
+    except Exception as e:
+        logger.error(f"Error deleting movie: {e}")
+        return jsonify({"status": "error", "message": f"Error deleting movie: {str(e)}"})
 
 @app.route('/view_analysis/<filename>')
 def view_analysis(filename):
@@ -542,17 +597,33 @@ def enhance_prompt_text(prompt):
 @app.route('/enhance_prompt', methods=['POST'])
 def enhance_prompt():
     """Enhance a prompt using the TemplateEnhancer."""
-    prompt = request.form.get('prompt', '')
+    prompt = request.form.get('prompt')
     
     if not prompt:
-        return jsonify({'status': 'error', 'message': 'No prompt provided'})
+        return jsonify({"status": "error", "message": "Prompt is required"})
     
     enhanced_prompt = enhance_prompt_text(prompt)
     
     return jsonify({
-        'status': 'success',
-        'original_prompt': prompt,
-        'enhanced_prompt': enhanced_prompt
+        "status": "success",
+        "message": "Prompt enhanced successfully",
+        "enhanced_prompt": enhanced_prompt
+    })
+
+@app.route('/chelsea/enhance_prompt', methods=['POST'])
+def chelsea_enhance_prompt():
+    """Enhance a prompt for Chelsea using the TemplateEnhancer."""
+    prompt = request.form.get('prompt')
+    
+    if not prompt:
+        return jsonify({"status": "error", "message": "Prompt is required"})
+    
+    enhanced_prompt = enhance_prompt_text(prompt)
+    
+    return jsonify({
+        "status": "success",
+        "message": "Prompt enhanced successfully for Chelsea",
+        "enhanced_prompt": enhanced_prompt
     })
 
 @app.route('/preferences', methods=['GET', 'POST'])
@@ -688,6 +759,189 @@ def score_video():
         'scores': scores,
         'feedback': feedback
     })
+
+@app.route('/chelsea')
+def chelsea_index():
+    """Render the Chelsea page."""
+    # Get all Chelsea's clips
+    clips = []
+    if os.path.exists(CHELSEA_CLIP_DIR):
+        for filename in os.listdir(CHELSEA_CLIP_DIR):
+            if filename.endswith('.mp4'):
+                # Extract the prompt from the filename
+                parts = filename.split('_', 1)
+                if len(parts) > 1:
+                    timestamp = parts[0]
+                    prompt = parts[1].replace('.mp4', '').replace('_', ' ')
+                else:
+                    timestamp = ''
+                    prompt = filename
+                
+                # Get file creation time
+                file_path = os.path.join(CHELSEA_CLIP_DIR, filename)
+                created = datetime.fromtimestamp(os.path.getctime(file_path)).strftime('%Y-%m-%d %H:%M:%S')
+                
+                # Check if this clip has been analyzed
+                analysis_path = os.path.splitext(file_path)[0] + "_final_analysis.txt"
+                scores_path = os.path.splitext(file_path)[0] + "_scores.json"
+                
+                has_analysis = os.path.exists(analysis_path)
+                has_scores = os.path.exists(scores_path)
+                
+                # Get scores if available
+                scores = None
+                if has_scores:
+                    try:
+                        with open(scores_path, 'r') as f:
+                            scores = json.load(f)
+                    except Exception as e:
+                        logger.error(f"Error reading scores file {scores_path}: {e}")
+                
+                clips.append({
+                    'filename': filename,
+                    'prompt': prompt,
+                    'created': created,
+                    'has_analysis': has_analysis,
+                    'has_scores': has_scores,
+                    'scores': scores
+                })
+    
+    # Sort clips by creation time (newest first)
+    clips.sort(key=lambda x: x['created'], reverse=True)
+    
+    # Get all movies (same as main page)
+    movies = []
+    for filename in sorted(os.listdir(MOVIE_DIR), key=lambda x: os.path.getmtime(os.path.join(MOVIE_DIR, x)), reverse=True):
+        if filename.endswith('.mp4'):
+            movie_path = os.path.join(MOVIE_DIR, filename)
+            movies.append({
+                'filename': filename,
+                'path': movie_path,
+                'created': datetime.fromtimestamp(os.path.getmtime(movie_path)).strftime('%Y-%m-%d %H:%M:%S')
+            })
+    
+    # Get user preferences
+    preferences = get_user_preferences()
+    
+    # Get sample enhanced prompts for the help section
+    sample_prompts = [
+        "A red ball bouncing",
+        "A butterfly in a garden",
+        "A car driving on a mountain road"
+    ]
+    sample_enhanced = [enhance_prompt_text(p) for p in sample_prompts]
+    
+    return render_template('index.html', 
+                          clips=clips, 
+                          movies=movies, 
+                          page_title="Chelsea's Movie Maker Beta", 
+                          preferences=preferences,
+                          sample_prompts=sample_prompts,
+                          sample_enhanced=sample_enhanced,
+                          is_chelsea=True)
+
+@app.route('/chelsea/generate', methods=['POST'])
+def chelsea_generate():
+    """Generate a video from a text prompt for Chelsea."""
+    prompt = request.form.get('prompt', '')
+    use_enhanced = request.form.get('use_enhanced', 'false') == 'true'
+    enhanced_prompt = request.form.get('enhanced_prompt', '')
+    
+    if not prompt:
+        return jsonify({'status': 'error', 'message': 'No prompt provided'})
+    
+    # Use the enhanced prompt if requested
+    final_prompt = enhanced_prompt if use_enhanced and enhanced_prompt else prompt
+    
+    # Generate a unique filename
+    timestamp = int(time.time())
+    filename = f"{timestamp}_{final_prompt[:50]}.mp4"
+    output_path = os.path.join(CHELSEA_CLIP_DIR, filename)
+    
+    # Generate the video
+    success, result = generate_video(final_prompt, output_path)
+    
+    if success:
+        return jsonify({
+            'status': 'success',
+            'message': 'Video generated successfully for Chelsea',
+            'clip': filename,
+            'prompt': final_prompt
+        })
+    else:
+        logger.error(f"Error generating video for Chelsea: {result}")
+        return jsonify({'status': 'error', 'message': f'Error generating video: {result}'})
+
+@app.route('/chelsea/clips/<filename>')
+def serve_chelsea_clip(filename):
+    """Serve a Chelsea video clip."""
+    return send_from_directory(CHELSEA_CLIP_DIR, filename)
+
+@app.route('/chelsea/delete_clip/<filename>', methods=['POST'])
+def delete_chelsea_clip(filename):
+    """Delete a Chelsea video clip."""
+    try:
+        clip_path = os.path.join(CHELSEA_CLIP_DIR, filename)
+        if os.path.exists(clip_path):
+            os.remove(clip_path)
+            
+            # Also delete analysis files if they exist
+            analysis_path = os.path.splitext(clip_path)[0] + "_analysis.txt"
+            if os.path.exists(analysis_path):
+                os.remove(analysis_path)
+                
+            final_analysis_path = os.path.splitext(clip_path)[0] + "_final_analysis.txt"
+            if os.path.exists(final_analysis_path):
+                os.remove(final_analysis_path)
+                
+            iteration_json_path = os.path.splitext(clip_path)[0] + "_iteration_1.json"
+            if os.path.exists(iteration_json_path):
+                os.remove(iteration_json_path)
+                
+            scores_path = os.path.splitext(clip_path)[0] + "_scores.json"
+            if os.path.exists(scores_path):
+                os.remove(scores_path)
+            
+            return jsonify({"status": "success", "message": f"Clip {filename} deleted"})
+        else:
+            return jsonify({"status": "error", "message": f"Clip {filename} not found"})
+    except Exception as e:
+        logger.error(f"Error deleting clip: {e}")
+        return jsonify({"status": "error", "message": f"Error deleting clip: {str(e)}"})
+
+@app.route('/chelsea/combine', methods=['POST'])
+def chelsea_combine():
+    """Combine multiple clips into a movie for Chelsea."""
+    movie_title = request.form.get('movie_title', '')
+    clip_filenames = request.form.getlist('clips')
+    
+    if not movie_title:
+        return jsonify({'status': 'error', 'message': 'Movie title is required'})
+    
+    if not clip_filenames:
+        return jsonify({'status': 'error', 'message': 'No clips selected'})
+    
+    # Generate a unique filename for the movie
+    timestamp = int(time.time())
+    safe_title = ''.join(c if c.isalnum() or c in ' _-' else '_' for c in movie_title[:50])
+    movie_filename = f"{timestamp}_{safe_title}.mp4"
+    output_path = os.path.join(MOVIE_DIR, movie_filename)
+    
+    # Get the full paths of the selected clips
+    clip_paths = [os.path.join(CHELSEA_CLIP_DIR, filename) for filename in clip_filenames]
+    
+    # Combine the clips
+    success, result = combine_videos(clip_paths, output_path)
+    
+    if success:
+        return jsonify({
+            'status': 'success',
+            'message': 'Movie created successfully',
+            'movie': movie_filename,
+            'title': movie_title
+        })
+    else:
+        return jsonify({'status': 'error', 'message': f'Error creating movie: {result}'})
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Movie Maker Beta web interface")
