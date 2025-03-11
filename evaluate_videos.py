@@ -42,14 +42,14 @@ os.makedirs(ENHANCED_PROMPTS_DIR, exist_ok=True)
 # Initialize the prompt enhancer
 prompt_enhancer = TemplateEnhancer()
 
-def extract_frames(video_path, output_dir, interval=1):
+def extract_frames(video_path, output_dir, interval=0.5):
     """
     Extract frames from a video at specified intervals
     
     Args:
         video_path: Path to the video file
         output_dir: Directory to save extracted frames
-        interval: Interval in seconds between frames (default: 1)
+        interval: Interval in seconds between frames (default: 0.5)
     
     Returns:
         List of paths to extracted frames
@@ -235,7 +235,7 @@ def process_prompt(prompt, min_score=7, api_url="http://localhost:5001"):
         result["original_video"] = video_path
     
     # Step 2: Extract frames and evaluate
-    frames = extract_frames(video_path, FRAMES_DIR, interval=2)
+    frames = extract_frames(video_path, FRAMES_DIR, interval=0.5)
     if not frames:
         logger.error(f"No frames extracted from video: {video_path}")
         return result
@@ -257,7 +257,7 @@ def process_prompt(prompt, min_score=7, api_url="http://localhost:5001"):
                 result["new_video"] = new_video_path
                 
                 # Evaluate new video
-                new_frames = extract_frames(new_video_path, FRAMES_DIR, interval=2)
+                new_frames = extract_frames(new_video_path, FRAMES_DIR, interval=0.5)
                 if new_frames:
                     new_score, new_feedback = evaluate_frames_with_model(new_frames, enhanced_prompt)
                     result["new_score"] = new_score
