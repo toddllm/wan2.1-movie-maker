@@ -62,6 +62,33 @@ def check_gpu_usage():
             logger.info(f"Found Wan2.1 generate.py process with {memory_used}MB GPU memory usage")
             return True, memory_used
         
+        # Get the current process ID
+        current_pid = os.getpid()
+        parent_pid = os.getppid()
+        
+        # Check if the GPU is being used by the current process or its parent
+        result = subprocess.run(
+            ["nvidia-smi", "--query-compute-apps=pid", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True
+        )
+        
+        gpu_pids = [int(pid.strip()) for pid in result.stdout.strip().split('\n') if pid.strip()]
+        
+        # If the current process or its parent is using the GPU, don't wait
+        if current_pid in gpu_pids or parent_pid in gpu_pids:
+            logger.info(f"Current process or parent is using the GPU (memory: {memory_used}MB)")
+            return False, memory_used
+            
+        # Check if vision_analysis_poc.py is using the GPU
+        result = subprocess.run(
+            ["ps", "-ef", "|", "grep", "vision_analysis_poc.py"],
+            capture_output=True, text=True, shell=True
+        )
+        
+        if "vision_analysis_poc.py" in result.stdout and any(str(pid) in result.stdout for pid in gpu_pids):
+            logger.info(f"vision_analysis_poc.py is using the GPU (memory: {memory_used}MB)")
+            return False, memory_used
+        
         # Ignore baseline memory allocation completely
         # Only consider very high memory usage (>5GB) without a generate.py process
         if memory_used > 5000:

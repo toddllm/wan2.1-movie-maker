@@ -19,6 +19,9 @@ import json
 from difflib import SequenceMatcher
 from datetime import datetime
 
+# Import the scoring system
+from scoring_system import ScoringSystem
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -34,6 +37,12 @@ logger = logging.getLogger("vision_analysis_poc")
 CLIPS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clips")
 MODEL_HF_REPO = "microsoft/Phi-4-multimodal-instruct"  # Using Phi-4 from HF directly
 ACCURACY_THRESHOLD = 0.7  # Minimum similarity score to consider a video accurate
+
+# Initialize the scoring system
+scoring_system = ScoringSystem()
+
+# Define threshold for acceptable score
+SCORE_THRESHOLD = 0.6  # Minimum overall score to consider analysis acceptable
 
 def calculate_similarity(text1, text2):
     """Calculate similarity between two text descriptions."""
@@ -89,7 +98,7 @@ def generate_improved_prompt(original_prompt, feedback):
     
     return enhanced_prompt
 
-def analyze_and_improve_clip(model, processor, video_path, target_description=None, iteration=0, max_iterations=3):
+def analyze_and_improve_clip(model, processor, video_path, target_description=None, iteration=0, max_iterations=3, user_preferences=None):
     """Analyze a clip and generate improvements if needed."""
     logger.info(f"\nIteration {iteration + 1}: Analyzing clip: {video_path}")
     
@@ -147,8 +156,44 @@ def analyze_and_improve_clip(model, processor, video_path, target_description=No
         f.write("\n=== Overall Analysis ===\n\n")
         f.write(overall_analysis + "\n\n")
     
+    # Score the analysis using the scoring system
+    frame_desc_text = [desc for desc in frame_descriptions]
+    
+    # Apply user preferences to scoring if provided
+    if user_preferences and 'weights' in user_preferences:
+        custom_weights = user_preferences['weights']
+        temp_scoring_system = ScoringSystem(weights=custom_weights)
+        overall_score, scores, feedback = temp_scoring_system.evaluate_analysis(
+            target_description, frame_desc_text
+        )
+    else:
+        overall_score, scores, feedback = scoring_system.evaluate_analysis(
+            target_description, frame_desc_text
+        )
+    
+    logger.info(f"\nAnalysis Score: {overall_score:.2f}")
+    logger.info(f"Score Breakdown: {scores}")
+    logger.info(f"Feedback: {feedback}")
+    
+    # Save the scoring results
+    score_file = video_path.rsplit('.', 1)[0] + '_scores.json'
+    with open(score_file, 'w') as f:
+        json.dump({
+            'overall_score': overall_score,
+            'scores': scores,
+            'feedback': feedback
+        }, f, indent=2)
+    
     # Compare with target description and generate improved prompt
     improvement_prompt = f"<|user|>I need to create a video showing: '{target_description}'\n\nThe current video's content is: {overall_analysis}\n\nPlease help me improve it by:\n1. Identifying what elements are missing or need improvement\n2. Creating a detailed, specific prompt for the Wan2.1 text-to-video model that would generate a better video with focus on the car, the winding road, the mountains, and scenic views\n3. Suggesting camera angles and lighting that would enhance the scene<|end|><|assistant|>"
+    
+    # If user has specific focus areas, add them to the prompt
+    if user_preferences and 'focus_areas' in user_preferences:
+        focus_areas = ', '.join(user_preferences['focus_areas'])
+        improvement_prompt = improvement_prompt.replace(
+            "with focus on the car, the winding road, the mountains, and scenic views",
+            f"with focus on {focus_areas}"
+        )
     
     inputs = processor(
         text=improvement_prompt,
@@ -211,11 +256,20 @@ def analyze_and_improve_clip(model, processor, video_path, target_description=No
             'target_description': target_description,
             'improvement_analysis': improved_prompt,
             'final_prompt': final_prompt,
-            'iteration': iteration + 1
+            'iteration': iteration + 1,
+            'scores': scores,
+            'feedback': feedback,
+            'overall_score': overall_score
         }, f, indent=2)
     
-    # If we haven't hit max iterations, generate a new video with the improved prompt
-    if iteration < max_iterations - 1:
+    # If we haven't hit max iterations and the score is below threshold, generate a new video with the improved prompt
+    should_regenerate = (
+        iteration < max_iterations - 1 and 
+        (overall_score < SCORE_THRESHOLD or 
+         (user_preferences and 'min_score' in user_preferences and overall_score < user_preferences['min_score']))
+    )
+    
+    if should_regenerate:
         # Import the proper video generation function from direct_generate
         from direct_generate import generate_video as wan_generate_video, wait_for_gpu
         
@@ -241,7 +295,8 @@ def analyze_and_improve_clip(model, processor, video_path, target_description=No
             # Recursively analyze and improve with the new video
             return analyze_and_improve_clip(
                 model, processor, result, 
-                target_description, iteration + 1, max_iterations
+                target_description, iteration + 1, max_iterations,
+                user_preferences
             )
         else:
             logger.error(f"Failed to generate video: {result}")
@@ -264,10 +319,11 @@ def analyze_and_improve_clip(model, processor, video_path, target_description=No
                 logger.info(f"New video generated with direct prompt: {result}")
                 return analyze_and_improve_clip(
                     model, processor, result, 
-                    target_description, iteration + 1, max_iterations
+                    target_description, iteration + 1, max_iterations,
+                    user_preferences
                 )
     
-    return frame_descriptions, final_prompt
+    return frame_descriptions, final_prompt, overall_score, scores, feedback
 
 def load_model():
     """Load the vision model and processor."""
@@ -446,8 +502,32 @@ def main():
     
     parser.add_argument("--target", default=None, help="Target description to compare against")
     parser.add_argument("--max-iterations", type=int, default=3, help="Maximum number of improvement iterations")
+    parser.add_argument("--min-score", type=float, default=SCORE_THRESHOLD, help="Minimum acceptable score (0.0-1.0)")
+    parser.add_argument("--focus", nargs='+', default=None, help="Areas to focus on in the prompt (e.g. 'lighting' 'composition')")
+    parser.add_argument("--weights", nargs='+', default=None, help="Custom weights for scoring metrics (format: metric=weight)")
     
     args = parser.parse_args()
+    
+    # Process user preferences
+    user_preferences = {}
+    
+    if args.min_score:
+        user_preferences['min_score'] = args.min_score
+    
+    if args.focus:
+        user_preferences['focus_areas'] = args.focus
+    
+    if args.weights:
+        weights = {}
+        for weight_arg in args.weights:
+            if '=' in weight_arg:
+                metric, value = weight_arg.split('=')
+                try:
+                    weights[metric] = float(value)
+                except ValueError:
+                    logger.warning(f"Invalid weight value for {metric}: {value}")
+        if weights:
+            user_preferences['weights'] = weights
     
     # Load the model
     processor, model = load_model()
@@ -515,8 +595,9 @@ def main():
         return
     
     # Start the analysis and improvement loop
-    frame_descriptions, improved_prompt = analyze_and_improve_clip(
-        model, processor, video_path, args.target, max_iterations=args.max_iterations
+    frame_descriptions, improved_prompt, overall_score, scores, feedback = analyze_and_improve_clip(
+        model, processor, video_path, args.target, max_iterations=args.max_iterations,
+        user_preferences=user_preferences
     )
     
     # Save final results
@@ -524,7 +605,15 @@ def main():
     with open(output_path, "w") as f:
         f.write(f"=== Final Analysis (Improved Prompt: {improved_prompt}) ===\n\n")
         f.write(f"Target Description: {args.target or 'Extracted from filename'}\n\n")
-        f.write("=== Frame-by-Frame Analysis ===\n\n")
+        f.write(f"Overall Score: {overall_score:.2f}\n\n")
+        f.write("=== Score Breakdown ===\n\n")
+        for metric, score in scores.items():
+            if metric != "overall_score":
+                f.write(f"{metric}: {score:.2f}\n")
+        f.write("\n=== Feedback ===\n\n")
+        for metric, fb in feedback.items():
+            f.write(f"{metric}: {fb}\n")
+        f.write("\n=== Frame-by-Frame Analysis ===\n\n")
         for frame_description in frame_descriptions:
             f.write(f"{frame_description}\n\n")
     

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title|default('User Preferences') }}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 40px;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+        }
+        .card-header {
+            background-color: #2d2d2d;
+            border-bottom: 1px solid #333;
+            color: #e0e0e0;
+        }
+        .card-body {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        .form-control, .form-select {
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            color: #e0e0e0;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #2d2d2d;
+            border-color: #0d6efd;
+            color: #e0e0e0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .form-text {
+            color: #aaa;
+        }
+        .form-check-input {
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+        }
+        .form-check-input:checked {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .weight-slider {
+            width: 100%;
+        }
+        .weight-value {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>{{ page_title }}</h1>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Customize Your Analysis Preferences</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('preferences') }}" method="POST">
+                    <!-- Minimum Score Threshold -->
+                    <div class="mb-4">
+                        <h5>Minimum Score Threshold</h5>
+                        <p class="text-muted">Videos with scores below this threshold will be regenerated with improved prompts.</p>
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <input type="range" class="form-range" min="0" max="1" step="0.05" id="min_score" name="min_score" value="{{ preferences.min_score }}" oninput="updateMinScoreValue(this.value)">
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="min_score_value" value="{{ preferences.min_score }}" min="0" max="1" step="0.05" onchange="updateMinScoreSlider(this.value)">
+                                    <span class="input-group-text">/ 1.0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar bg-danger" role="progressbar" style="width: 40%;" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100">Poor (0.0-0.4)</div>
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100">Average (0.4-0.6)</div>
+                                <div class="progress-bar bg-info" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100">Good (0.6-0.8)</div>
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100">Excellent (0.8-1.0)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Focus Areas -->
+                    <div class="mb-4">
+                        <h5>Focus Areas</h5>
+                        <p class="text-muted">Select the areas you want to focus on in the video analysis and prompt generation.</p>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="focus_areas[]" value="composition" id="focus_composition" {% if 'composition' in preferences.focus_areas %}checked{% endif %}>
+                                    <label class="form-check-label" for="focus_composition">Composition</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="focus_areas[]" value="lighting" id="focus_lighting" {% if 'lighting' in preferences.focus_areas %}checked{% endif %}>
+                                    <label class="form-check-label" for="focus_lighting">Lighting</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="focus_areas[]" value="camera angles" id="focus_camera" {% if 'camera angles' in preferences.focus_areas %}checked{% endif %}>
+                                    <label class="form-check-label" for="focus_camera">Camera Angles</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="focus_areas[]" value="mood" id="focus_mood" {% if 'mood' in preferences.focus_areas %}checked{% endif %}>
+                                    <label class="form-check-label" for="focus_mood">Mood/Atmosphere</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="focus_areas[]" value="color" id="focus_color" {% if 'color' in preferences.focus_areas %}checked{% endif %}>
+                                    <label class="form-check-label" for="focus_color">Color Palette</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="focus_areas[]" value="movement" id="focus_movement" {% if 'movement' in preferences.focus_areas %}checked{% endif %}>
+                                    <label class="form-check-label" for="focus_movement">Movement/Action</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="focus_areas[]" value="subject" id="focus_subject" {% if 'subject' in preferences.focus_areas %}checked{% endif %}>
+                                    <label class="form-check-label" for="focus_subject">Subject Focus</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="focus_areas[]" value="background" id="focus_background" {% if 'background' in preferences.focus_areas %}checked{% endif %}>
+                                    <label class="form-check-label" for="focus_background">Background/Environment</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="focus_areas[]" value="style" id="focus_style" {% if 'style' in preferences.focus_areas %}checked{% endif %}>
+                                    <label class="form-check-label" for="focus_style">Visual Style</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scoring Weights -->
+                    <div class="mb-4">
+                        <h5>Scoring Weights</h5>
+                        <p class="text-muted">Adjust the importance of different metrics in the overall score calculation. Total weight will be normalized to 1.0.</p>
+                        
+                        <div class="mb-3">
+                            <label for="weight_prompt_relevance" class="form-label">Prompt Relevance: <span id="weight_prompt_relevance_value" class="weight-value">{{ preferences.weights.prompt_relevance }}</span></label>
+                            <input type="range" class="form-range weight-slider" min="0" max="1" step="0.05" id="weight_prompt_relevance" name="weight_prompt_relevance" value="{{ preferences.weights.prompt_relevance }}" oninput="updateWeightValue('prompt_relevance', this.value)">
+                            <small class="form-text">How well the prompt matches the video content</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="weight_frame_consistency" class="form-label">Frame Consistency: <span id="weight_frame_consistency_value" class="weight-value">{{ preferences.weights.frame_consistency }}</span></label>
+                            <input type="range" class="form-range weight-slider" min="0" max="1" step="0.05" id="weight_frame_consistency" name="weight_frame_consistency" value="{{ preferences.weights.frame_consistency }}" oninput="updateWeightValue('frame_consistency', this.value)">
+                            <small class="form-text">Consistency between frame descriptions</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="weight_detail_level" class="form-label">Detail Level: <span id="weight_detail_level_value" class="weight-value">{{ preferences.weights.detail_level }}</span></label>
+                            <input type="range" class="form-range weight-slider" min="0" max="1" step="0.05" id="weight_detail_level" name="weight_detail_level" value="{{ preferences.weights.detail_level }}" oninput="updateWeightValue('detail_level', this.value)">
+                            <small class="form-text">Level of detail in descriptions</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="weight_technical_accuracy" class="form-label">Technical Accuracy: <span id="weight_technical_accuracy_value" class="weight-value">{{ preferences.weights.technical_accuracy }}</span></label>
+                            <input type="range" class="form-range weight-slider" min="0" max="1" step="0.05" id="weight_technical_accuracy" name="weight_technical_accuracy" value="{{ preferences.weights.technical_accuracy }}" oninput="updateWeightValue('technical_accuracy', this.value)">
+                            <small class="form-text">Accuracy of technical elements described</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="weight_creative_elements" class="form-label">Creative Elements: <span id="weight_creative_elements_value" class="weight-value">{{ preferences.weights.creative_elements }}</span></label>
+                            <input type="range" class="form-range weight-slider" min="0" max="1" step="0.05" id="weight_creative_elements" name="weight_creative_elements" value="{{ preferences.weights.creative_elements }}" oninput="updateWeightValue('creative_elements', this.value)">
+                            <small class="form-text">Creative elements in the prompt</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="weight_grammar_quality" class="form-label">Grammar Quality: <span id="weight_grammar_quality_value" class="weight-value">{{ preferences.weights.grammar_quality }}</span></label>
+                            <input type="range" class="form-range weight-slider" min="0" max="1" step="0.05" id="weight_grammar_quality" name="weight_grammar_quality" value="{{ preferences.weights.grammar_quality }}" oninput="updateWeightValue('grammar_quality', this.value)">
+                            <small class="form-text">Grammar and language quality</small>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> The weights will be automatically normalized to sum to 1.0.
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetToDefaults()">Reset to Defaults</button>
+                        <button type="submit" class="btn btn-primary">Save Preferences</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Update min score value display
+        function updateMinScoreValue(value) {
+            document.getElementById('min_score_value').value = value;
+        }
+        
+        // Update min score slider from input
+        function updateMinScoreSlider(value) {
+            document.getElementById('min_score').value = value;
+        }
+        
+        // Update weight value display
+        function updateWeightValue(metric, value) {
+            document.getElementById(`weight_${metric}_value`).textContent = value;
+        }
+        
+        // Reset to default values
+        function resetToDefaults() {
+            // Min score
+            document.getElementById('min_score').value = 0.6;
+            document.getElementById('min_score_value').value = 0.6;
+            
+            // Focus areas
+            const defaultFocusAreas = ['composition', 'lighting', 'camera angles', 'mood'];
+            document.querySelectorAll('input[name="focus_areas[]"]').forEach(checkbox => {
+                checkbox.checked = defaultFocusAreas.includes(checkbox.value);
+            });
+            
+            // Weights
+            const defaultWeights = {
+                'prompt_relevance': 0.25,
+                'frame_consistency': 0.20,
+                'detail_level': 0.20,
+                'technical_accuracy': 0.15,
+                'creative_elements': 0.10,
+                'grammar_quality': 0.10
+            };
+            
+            for (const [metric, weight] of Object.entries(defaultWeights)) {
+                document.getElementById(`weight_${metric}`).value = weight;
+                document.getElementById(`weight_${metric}_value`).textContent = weight;
+            }
+        }
+    </script>
+</body>
+</html> 
