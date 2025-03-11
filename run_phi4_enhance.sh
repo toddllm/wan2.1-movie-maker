@@ -42,6 +42,15 @@ done
 LOG_FILE="phi4_enhance_generate.log"
 echo "Starting Phi-4 enhancement and video generation at $(date)" | tee -a "$LOG_FILE"
 
+# Activate the nexa_venv
+if [ -d "$HOME/nexa_venv" ]; then
+    echo "Activating nexa_venv virtual environment" | tee -a "$LOG_FILE"
+    source "$HOME/nexa_venv/bin/activate"
+else
+    echo "nexa_venv not found at $HOME/nexa_venv. Please create it first." | tee -a "$LOG_FILE"
+    exit 1
+fi
+
 # Check if Phi-4 model is set up
 if [ ! -d "./phi4_models" ]; then
     echo "Phi-4 model not found. Running setup first..." | tee -a "$LOG_FILE"

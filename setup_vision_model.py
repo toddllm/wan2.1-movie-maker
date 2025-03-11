@@ -28,25 +28,25 @@ logger = logging.getLogger("vision_model_setup")
 MODELS = {
     "idefics3-8b": {
         "name": "Idefics3-8B",
-        "huggingface_repo": "HuggingFaceH4/idefics3-8b",
+        "huggingface_repo": "HuggingFaceM4/Idefics3-8B-Llama3",
         "description": "A state-of-the-art open-source vision-language model built on Llama 3.1 and SigLIP-SO400M.",
         "requirements": ["torch>=2.0.0", "transformers>=4.35.0", "accelerate", "pillow", "sentencepiece"]
     },
     "openflamingo": {
         "name": "OpenFlamingo",
-        "huggingface_repo": "openflamingo/OpenFlamingo-9B",
+        "huggingface_repo": "openflamingo/OpenFlamingo-9B-vitl-mpt7b",
         "description": "An open-source adaptation of DeepMind's Flamingo, combining CLIP ViT-L/14 with a 7B parameter language model.",
         "requirements": ["torch>=2.0.0", "transformers>=4.35.0", "accelerate", "pillow", "open_flamingo"]
     },
     "llava-onevision": {
         "name": "LLaVA-OneVision",
-        "huggingface_repo": "llava-hf/llava-v1.6-vicuna-7b",
+        "huggingface_repo": "llava-hf/llava-onevision-qwen2-7b-ov-hf",
         "description": "A minimalist design that effectively leverages pre-trained capabilities of both LLM and visual models.",
         "requirements": ["torch>=2.0.0", "transformers>=4.35.0", "accelerate", "pillow", "llava"]
     },
     "cogvlm2": {
         "name": "CogVLM2",
-        "huggingface_repo": "THUDM/cogvlm2-llama3-chat-8b",
+        "huggingface_repo": "THUDM/cogvlm2-llama3-chat-19B",
         "description": "A family of open-source visual language models designed for image and video understanding.",
         "requirements": ["torch>=2.0.0", "transformers>=4.35.0", "accelerate", "pillow", "sentencepiece"]
     }

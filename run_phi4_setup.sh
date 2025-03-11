@@ -9,6 +9,15 @@ set -e
 LOG_FILE="phi4_setup.log"
 echo "Starting Phi-4 model setup at $(date)" | tee -a "$LOG_FILE"
 
+# Activate the nexa_venv
+if [ -d "$HOME/nexa_venv" ]; then
+    echo "Activating nexa_venv virtual environment" | tee -a "$LOG_FILE"
+    source "$HOME/nexa_venv/bin/activate"
+else
+    echo "nexa_venv not found at $HOME/nexa_venv. Please create it first." | tee -a "$LOG_FILE"
+    exit 1
+fi
+
 # Source HF_TOKEN if available
 if [ -f ~/source.me ]; then
     echo "Sourcing token from ~/source.me" | tee -a "$LOG_FILE"

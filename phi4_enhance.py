@@ -60,7 +60,18 @@ def load_model():
             model_kwargs["device_map"] = "auto"
             gpu_name = torch.cuda.get_device_name(0)
             supports_flash_attn = any(gpu in gpu_name.lower() for gpu in ["a100", "a6000", "h100"])
-            model_kwargs["_attn_implementation"] = "flash_attention_2" if supports_flash_attn else "eager"
+            
+            if supports_flash_attn:
+                try:
+                    import flash_attn
+                    model_kwargs["_attn_implementation"] = "flash_attention_2"
+                    logger.info("Using flash attention implementation")
+                except ImportError:
+                    logger.warning("flash_attn module not available, falling back to eager implementation")
+                    model_kwargs["_attn_implementation"] = "eager"
+            else:
+                model_kwargs["_attn_implementation"] = "eager"
+                logger.info("Using eager attention implementation")
         
         model = AutoModelForCausalLM.from_pretrained(PHI4_MODEL_DIR, **model_kwargs)
         

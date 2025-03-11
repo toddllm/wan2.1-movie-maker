@@ -29,13 +29,19 @@ logger = logging.getLogger("phi4_model_setup")
 MODEL_ID = "microsoft/Phi-4-multimodal-instruct"
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "phi4_models")
 
+# Use the existing nexa_venv
+VENV_PATH = os.path.expanduser("~/nexa_venv")
+PYTHON_PATH = os.path.join(VENV_PATH, "bin", "python")
+
 def install_requirements():
     """Install required packages for Phi-4-multimodal-instruct."""
+    # Skip flash-attn if not on compatible hardware
+    has_gpu, supports_flash_attn = check_gpu() if torch.cuda.is_available() else (False, False)
+    
+    # Base requirements without flash-attn
     requirements = [
-        "torch>=2.6.0",
         "transformers>=4.48.2",
         "accelerate>=1.3.0",
-        "flash-attn>=2.7.4",
         "soundfile>=0.13.1",
         "pillow>=11.1.0",
         "scipy>=1.15.2",
@@ -44,10 +50,23 @@ def install_requirements():
         "peft>=0.13.2"
     ]
     
+    # Only add flash-attn if on compatible hardware
+    if has_gpu and supports_flash_attn:
+        logger.info("Compatible GPU detected, will attempt to install flash-attn")
+        try:
+            # Try installing flash-attn separately first
+            subprocess.check_call([PYTHON_PATH, "-m", "pip", "install", "flash-attn>=2.7.4"])
+            logger.info("Successfully installed flash-attn")
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Could not install flash-attn: {e}")
+            logger.warning("Will continue without flash-attn, using eager attention implementation instead")
+    else:
+        logger.info("Skipping flash-attn installation as no compatible GPU was detected")
+    
     logger.info(f"Installing requirements: {', '.join(requirements)}")
     
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install"] + requirements)
+        subprocess.check_call([PYTHON_PATH, "-m", "pip", "install"] + requirements)
         logger.info("Successfully installed requirements")
         return True
     except subprocess.CalledProcessError as e:
@@ -58,7 +77,7 @@ def check_gpu():
     """Check if a compatible GPU is available."""
     if not torch.cuda.is_available():
         logger.warning("No CUDA-compatible GPU detected. The model will run slowly on CPU.")
-        return False
+        return False, False
     
     gpu_name = torch.cuda.get_device_name(0)
     logger.info(f"Found GPU: {gpu_name}")
@@ -106,9 +125,16 @@ def download_model(token=None):
         has_gpu, supports_flash_attn = check_gpu() if torch.cuda.is_available() else (False, False)
         if has_gpu:
             if supports_flash_attn:
-                model_kwargs["_attn_implementation"] = "flash_attention_2"
+                try:
+                    import flash_attn
+                    model_kwargs["_attn_implementation"] = "flash_attention_2"
+                    logger.info("Using flash attention implementation")
+                except ImportError:
+                    logger.warning("flash_attn module not available, falling back to eager implementation")
+                    model_kwargs["_attn_implementation"] = "eager"
             else:
                 model_kwargs["_attn_implementation"] = "eager"
+                logger.info("Using eager attention implementation")
         
         model = AutoModelForCausalLM.from_pretrained(MODEL_ID, **model_kwargs)
         model.save_pretrained(os.path.join(MODEL_DIR))
@@ -150,7 +176,11 @@ def test_model(token=None):
         if has_gpu:
             model_kwargs["device_map"] = "auto"
             if supports_flash_attn:
-                model_kwargs["_attn_implementation"] = "flash_attention_2"
+                try:
+                    import flash_attn
+                    model_kwargs["_attn_implementation"] = "flash_attention_2"
+                except ImportError:
+                    model_kwargs["_attn_implementation"] = "eager"
             else:
                 model_kwargs["_attn_implementation"] = "eager"
         
@@ -199,8 +229,7 @@ def setup_model(token=None):
     """Set up the Phi-4-multimodal-instruct model."""
     # Install requirements
     if not install_requirements():
-        logger.error("Failed to install requirements. Exiting.")
-        return False
+        logger.warning("Some requirements installation failed, but continuing with model setup")
     
     # Download model
     if not download_model(token):
