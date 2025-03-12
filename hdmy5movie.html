@@ -177,49 +177,16 @@
         <h2 id="opening-credits">Opening Credits: The Legend of Casta</h2>
         <div class="video-grid" id="opening-credits-grid">
             <!-- Videos will be dynamically added here -->
-            <div class="video-item">
-                <div class="video-container">
-                    <div style="background-color: #333; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        <p>Loading videos...</p>
-                    </div>
-                </div>
-                <div class="video-info">
-                    <h3 class="video-title">Opening Scene</h3>
-                    <p class="video-description">Loading video information...</p>
-                </div>
-            </div>
         </div>
 
         <h2 id="prologue">Prologue: The Golden Magma Egg</h2>
         <div class="video-grid" id="prologue-grid">
             <!-- Videos will be dynamically added here -->
-            <div class="video-item">
-                <div class="video-container">
-                    <div style="background-color: #333; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        <p>Loading videos...</p>
-                    </div>
-                </div>
-                <div class="video-info">
-                    <h3 class="video-title">Prologue</h3>
-                    <p class="video-description">Loading video information...</p>
-                </div>
-            </div>
         </div>
 
         <h2 id="act1">Act I: Assembly</h2>
         <div class="video-grid" id="act1-grid">
             <!-- Videos will be dynamically added here -->
-            <div class="video-item">
-                <div class="video-container">
-                    <div style="background-color: #333; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        <p>Loading videos...</p>
-                    </div>
-                </div>
-                <div class="video-info">
-                    <h3 class="video-title">Act I</h3>
-                    <p class="video-description">Loading video information...</p>
-                </div>
-            </div>
         </div>
 
         <h2 id="interlude1">Interlude: The Breach Begins</h2>
@@ -315,15 +282,31 @@
             const sectionGrid = document.getElementById(`${sectionId}-grid`);
             if (!sectionGrid) return;
             
-            // Clear existing content if we have videos
+            // Clear existing content
+            sectionGrid.innerHTML = '';
+            
             if (videos.length > 0) {
-                sectionGrid.innerHTML = '';
-                
                 // Add each video to the grid
                 videos.forEach(videoData => {
                     const videoElement = createVideoElement(videoData);
                     sectionGrid.appendChild(videoElement);
                 });
+            } else {
+                // Add a "No videos yet" message
+                const noVideosMessage = document.createElement('div');
+                noVideosMessage.className = 'video-item';
+                noVideosMessage.innerHTML = `
+                    <div class="video-container">
+                        <div style="background-color: #333; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                            <p>No videos yet</p>
+                        </div>
+                    </div>
+                    <div class="video-info">
+                        <h3 class="video-title">Coming Soon</h3>
+                        <p class="video-description">Videos for this section will appear here as they are generated.</p>
+                    </div>
+                `;
+                sectionGrid.appendChild(noVideosMessage);
             }
         }
         
