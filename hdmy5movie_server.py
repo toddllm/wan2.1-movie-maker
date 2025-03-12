@@ -42,7 +42,7 @@ class HDMYMovieHandler(SimpleHTTPRequestHandler):
         
         # Default progress data
         progress_data = {
-            "total": 255,
+            "total": 0,  # Will be updated from the file if it exists
             "current": 0,
             "percentage": 0,
             "last_updated": datetime.now().isoformat(),
@@ -77,6 +77,10 @@ class HDMYMovieHandler(SimpleHTTPRequestHandler):
                 section_dir = os.path.join(self.directory, 'hdmy5movie_videos', section)
                 if os.path.exists(section_dir):
                     video_count += len([f for f in os.listdir(section_dir) if f.endswith('.mp4')])
+            
+            # Use default total if not specified in the file
+            if progress_data["total"] == 0:
+                progress_data["total"] = 255  # Default total
             
             progress_data["current"] = video_count
             progress_data["percentage"] = round((video_count / progress_data["total"]) * 100, 2)
