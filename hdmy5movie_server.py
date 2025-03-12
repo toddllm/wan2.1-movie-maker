@@ -39,10 +39,11 @@ class HDMYMovieHandler(SimpleHTTPRequestHandler):
     def send_progress(self):
         """Send the current progress as JSON."""
         progress_file = os.path.join(self.directory, 'hdmy5movie_videos', 'progress.json')
+        prompts_file = os.path.join(self.directory, 'hdmy5movie_prompts.txt')
         
         # Default progress data
         progress_data = {
-            "total": 0,  # Will be updated from the file if it exists
+            "total": 0,  # Will be updated from the prompts file
             "current": 0,
             "percentage": 0,
             "last_updated": datetime.now().isoformat(),
@@ -58,33 +59,55 @@ class HDMYMovieHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             print(f"Error reading progress file: {e}")
         
-        # If progress file doesn't exist, count videos
-        if not os.path.exists(progress_file):
-            video_count = 0
-            sections = [
-                "01_opening_credits",
-                "02_prologue",
-                "03_act1",
-                "04_interlude1",
-                "05_act2",
-                "06_interlude2",
-                "07_act3",
-                "08_epilogue",
-                "09_credits"
-            ]
-            
-            for section in sections:
-                section_dir = os.path.join(self.directory, 'hdmy5movie_videos', section)
-                if os.path.exists(section_dir):
-                    video_count += len([f for f in os.listdir(section_dir) if f.endswith('.mp4')])
-            
-            # Use default total if not specified in the file
+        # Count videos
+        video_count = 0
+        sections = [
+            "01_opening_credits",
+            "02_prologue",
+            "03_act1",
+            "04_interlude1",
+            "05_act2",
+            "06_interlude2",
+            "07_act3",
+            "08_epilogue",
+            "09_credits"
+        ]
+        
+        for section in sections:
+            section_dir = os.path.join(self.directory, 'hdmy5movie_videos', section)
+            if os.path.exists(section_dir):
+                video_count += len([f for f in os.listdir(section_dir) if f.endswith('.mp4')])
+        
+        # Update current count
+        progress_data["current"] = video_count
+        
+        # Calculate total from prompts file if it exists
+        if os.path.exists(prompts_file):
+            try:
+                with open(prompts_file, 'r') as f:
+                    # Count non-empty lines
+                    total_prompts = sum(1 for line in f if line.strip())
+                
+                # Update total
+                progress_data["total"] = total_prompts
+            except Exception as e:
+                print(f"Error reading prompts file: {e}")
+                # Use default if prompts file can't be read
+                if progress_data["total"] == 0:
+                    progress_data["total"] = 255  # Default total
+        else:
+            # Use default if prompts file doesn't exist
             if progress_data["total"] == 0:
                 progress_data["total"] = 255  # Default total
-            
-            progress_data["current"] = video_count
+        
+        # Calculate percentage
+        if progress_data["total"] > 0:
             progress_data["percentage"] = round((video_count / progress_data["total"]) * 100, 2)
-            progress_data["last_updated"] = datetime.now().isoformat()
+        else:
+            progress_data["percentage"] = 0
+        
+        # Update timestamp
+        progress_data["last_updated"] = datetime.now().isoformat()
         
         # Send the progress data as JSON
         self.send_response(200)
