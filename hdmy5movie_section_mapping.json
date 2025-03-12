@@ -1,0 +1,64 @@
+{
+  "section_ranges": [
+    {
+      "start": 1,
+      "end": 28,
+      "section": "01_opening_credits",
+      "title": "Opening Credits: The Legend of Casta"
+    },
+    {
+      "start": 29,
+      "end": 56,
+      "section": "02_prologue",
+      "title": "Prologue: The Golden Magma Egg"
+    },
+    {
+      "start": 57,
+      "end": 84,
+      "section": "03_act1",
+      "title": "Act I: Assembly"
+    },
+    {
+      "start": 85,
+      "end": 112,
+      "section": "04_interlude1",
+      "title": "Interlude: The Breach Begins"
+    },
+    {
+      "start": 113,
+      "end": 140,
+      "section": "05_act2",
+      "title": "Act II: Preparation"
+    },
+    {
+      "start": 141,
+      "end": 168,
+      "section": "06_interlude2",
+      "title": "Interlude: The Watchers"
+    },
+    {
+      "start": 169,
+      "end": 196,
+      "section": "07_act3",
+      "title": "Act III: Confrontation"
+    },
+    {
+      "start": 197,
+      "end": 224,
+      "section": "08_epilogue",
+      "title": "Epilogue: Legendary"
+    },
+    {
+      "start": 225,
+      "end": 252,
+      "section": "09_credits",
+      "title": "Mid & Post Credits Scenes"
+    }
+  ],
+  "override_mappings": {
+    "001_001.mp4": "01_opening_credits",
+    "002_002.mp4": "01_opening_credits",
+    "003_003.mp4": "01_opening_credits",
+    "004_004.mp4": "01_opening_credits"
+  }
+} 

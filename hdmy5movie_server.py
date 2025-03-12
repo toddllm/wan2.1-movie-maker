@@ -130,23 +130,60 @@ class HDMYMovieHandler(SimpleHTTPRequestHandler):
             "09_credits": []
         }
         
-        # Scan each section directory for MP4 files
+        # Load section mapping if it exists
+        mapping_file = os.path.join(self.directory, 'hdmy5movie_section_mapping.json')
+        section_mapping = None
+        if os.path.exists(mapping_file):
+            try:
+                with open(mapping_file, 'r') as f:
+                    section_mapping = json.load(f)
+                print(f"Loaded section mapping from {mapping_file}")
+            except Exception as e:
+                print(f"Error loading section mapping: {e}")
+        
+        # Get all MP4 files from all section directories
+        all_mp4_files = []
         for section in videos_data.keys():
             section_dir = os.path.join(self.directory, 'hdmy5movie_videos', section)
             if os.path.exists(section_dir):
-                # Get all MP4 files and sort them
-                mp4_files = [f for f in os.listdir(section_dir) if f.endswith('.mp4')]
-                mp4_files.sort()
-                
-                # Add each file to the list with its path
-                for mp4_file in mp4_files:
-                    video_path = f"hdmy5movie_videos/{section}/{mp4_file}"
-                    videos_data[section].append({
-                        "path": video_path,
-                        "filename": mp4_file,
-                        "title": f"Scene {mp4_file.split('_')[0]}",
-                        "description": f"Video clip {mp4_file.replace('.mp4', '')}"
-                    })
+                for mp4_file in [f for f in os.listdir(section_dir) if f.endswith('.mp4')]:
+                    all_mp4_files.append((section, mp4_file))
+        
+        # Process each video file
+        for original_section, mp4_file in all_mp4_files:
+            # Determine the correct section based on mapping
+            target_section = original_section
+            
+            if section_mapping:
+                # Check for specific override
+                if "override_mappings" in section_mapping and mp4_file in section_mapping["override_mappings"]:
+                    target_section = section_mapping["override_mappings"][mp4_file]
+                # Check for range-based mapping
+                elif "section_ranges" in section_mapping:
+                    # Extract the first number from the filename (e.g., "001" from "001_001.mp4")
+                    try:
+                        file_num = int(mp4_file.split('_')[0])
+                        for range_mapping in section_mapping["section_ranges"]:
+                            if range_mapping["start"] <= file_num <= range_mapping["end"]:
+                                target_section = range_mapping["section"]
+                                break
+                    except (ValueError, IndexError) as e:
+                        print(f"Error parsing filename {mp4_file}: {e}")
+            
+            # Create the video path based on the original location
+            video_path = f"hdmy5movie_videos/{original_section}/{mp4_file}"
+            
+            # Add the video to the target section
+            videos_data[target_section].append({
+                "path": video_path,
+                "filename": mp4_file,
+                "title": f"Scene {mp4_file.split('_')[0]}",
+                "description": f"Video clip {mp4_file.replace('.mp4', '')}"
+            })
+        
+        # Sort videos in each section
+        for section in videos_data:
+            videos_data[section].sort(key=lambda x: x["filename"])
         
         # Send the videos data as JSON
         self.send_response(200)
