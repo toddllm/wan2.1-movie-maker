@@ -1,5 +1,5 @@
 {
-  "r1v_model": "Qwen/Qwen2-VL-7B",
-  "r1omni_model": "HumanMLLM/R1-Omni-0.5B",
+  "r1v_model": "Qwen/Qwen-VL-Chat",
+  "r1omni_model": "StarJiaxing/R1-Omni-0.5B",
   "device": "cuda"
-} 
+}

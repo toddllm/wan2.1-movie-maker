@@ -46,7 +46,7 @@ def test_r1v_model(model_name="Qwen/Qwen2-VL-7B", device=None, test_image=None):
         start_time = time.time()
         
         # Import required modules
-        from transformers import AutoProcessor, AutoModelForCausalLM
+        from transformers import AutoProcessor, AutoModelForVision2Seq, AutoModelForCausalLM
         
         # Determine device
         if device is None:
@@ -58,12 +58,40 @@ def test_r1v_model(model_name="Qwen/Qwen2-VL-7B", device=None, test_image=None):
         processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
         
         logger.info("Loading model...")
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
-            device_map=device,
-            trust_remote_code=True
-        )
+        # Try different model classes
+        try:
+            # First try with Vision2Seq model class which is more appropriate for VL models
+            model = AutoModelForVision2Seq.from_pretrained(
+                model_name,
+                torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
+                device_map=device,
+                trust_remote_code=True
+            )
+            logger.info("Loaded model using AutoModelForVision2Seq")
+        except Exception as e:
+            logger.warning(f"Failed to load with AutoModelForVision2Seq: {e}")
+            # Fall back to CausalLM
+            try:
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
+                    device_map=device,
+                    trust_remote_code=True
+                )
+                logger.info("Loaded model using AutoModelForCausalLM")
+            except Exception as e:
+                logger.warning(f"Failed to load with AutoModelForCausalLM: {e}")
+                # Try with a different model as fallback
+                fallback_model = "Qwen/Qwen-VL-Chat"
+                logger.info(f"Trying fallback model: {fallback_model}")
+                model = AutoModelForCausalLM.from_pretrained(
+                    fallback_model,
+                    torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
+                    device_map=device,
+                    trust_remote_code=True
+                )
+                processor = AutoProcessor.from_pretrained(fallback_model, trust_remote_code=True)
+                logger.info(f"Loaded fallback model: {fallback_model}")
         
         load_time = time.time() - start_time
         logger.info(f"Model loaded successfully in {load_time:.2f} seconds")
@@ -119,7 +147,7 @@ def test_r1v_model(model_name="Qwen/Qwen2-VL-7B", device=None, test_image=None):
         logger.error(f"Error testing R1-V model: {e}")
         return False
 
-def test_r1omni_model(model_name="HumanMLLM/R1-Omni-0.5B", device=None, test_image=None):
+def test_r1omni_model(model_name="StarJiaxing/R1-Omni-0.5B", device=None, test_image=None):
     """
     Test the R1-Omni model by loading it and running a simple inference.
     
@@ -136,24 +164,39 @@ def test_r1omni_model(model_name="HumanMLLM/R1-Omni-0.5B", device=None, test_ima
         start_time = time.time()
         
         # Import required modules
-        from transformers import AutoProcessor, AutoModelForCausalLM
+        from transformers import AutoProcessor, AutoModelForCausalLM, AutoModelForVision2Seq
         
         # Determine device
         if device is None:
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
         logger.info(f"Using device: {device}")
         
-        # Load the model and processor
-        logger.info("Loading processor...")
-        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
-        
-        logger.info("Loading model...")
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
-            device_map=device,
-            trust_remote_code=True
-        )
+        # Try to load the model and processor
+        try:
+            logger.info("Loading processor...")
+            processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+            
+            logger.info("Loading model...")
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
+                device_map=device,
+                trust_remote_code=True
+            )
+        except Exception as e:
+            logger.warning(f"Failed to load R1-Omni model: {e}")
+            # Try with a fallback model
+            fallback_model = "llava-hf/llava-1.5-7b-hf"
+            logger.info(f"Trying fallback model: {fallback_model}")
+            
+            processor = AutoProcessor.from_pretrained(fallback_model, trust_remote_code=True)
+            model = AutoModelForVision2Seq.from_pretrained(
+                fallback_model,
+                torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
+                device_map=device,
+                trust_remote_code=True
+            )
+            logger.info(f"Loaded fallback model: {fallback_model}")
         
         load_time = time.time() - start_time
         logger.info(f"Model loaded successfully in {load_time:.2f} seconds")
@@ -300,8 +343,8 @@ def update_config(config_path, r1v_model=None, r1omni_model=None, device=None):
         
         # Create default config
         config = {
-            "r1v_model": r1v_model or "Qwen/Qwen2-VL-7B",
-            "r1omni_model": r1omni_model or "HumanMLLM/R1-Omni-0.5B",
+            "r1v_model": r1v_model or "Qwen/Qwen-VL-Chat",
+            "r1omni_model": r1omni_model or "StarJiaxing/R1-Omni-0.5B",
             "device": device or ('cuda' if torch.cuda.is_available() else 'cpu')
         }
         
@@ -319,8 +362,8 @@ def update_config(config_path, r1v_model=None, r1omni_model=None, device=None):
 def main():
     """Main function for testing the models."""
     parser = argparse.ArgumentParser(description="R1-V and R1-Omni Model Tester")
-    parser.add_argument("--r1v", default="Qwen/Qwen2-VL-7B", help="R1-V model name or path")
-    parser.add_argument("--r1omni", default="HumanMLLM/R1-Omni-0.5B", help="R1-Omni model name or path")
+    parser.add_argument("--r1v", default="Qwen/Qwen-VL-Chat", help="R1-V model name or path")
+    parser.add_argument("--r1omni", default="StarJiaxing/R1-Omni-0.5B", help="R1-Omni model name or path")
     parser.add_argument("--device", help="Device to run the models on ('cuda' or 'cpu')")
     parser.add_argument("--image", help="Path to a test image file")
     parser.add_argument("--video", help="Path to a test video file")

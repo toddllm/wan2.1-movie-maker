@@ -20,7 +20,7 @@ from PIL import Image
 import json
 import tempfile
 from pathlib import Path
-from transformers import AutoProcessor, AutoModelForCausalLM
+from transformers import AutoProcessor, AutoModelForCausalLM, AutoModelForVision2Seq
 
 # Configure logging
 logging.basicConfig(
@@ -38,7 +38,7 @@ class EmotionDetector:
     Emotion recognition using R1-Omni model capabilities.
     """
     
-    def __init__(self, model_name="HumanMLLM/R1-Omni-0.5B", device=None):
+    def __init__(self, model_name="StarJiaxing/R1-Omni-0.5B", device=None):
         """
         Initialize the emotion detector with the specified model.
         
@@ -65,13 +65,29 @@ class EmotionDetector:
         """Load the R1-Omni model and processor."""
         try:
             logger.info(f"Loading model: {self.model_name}")
-            self.processor = AutoProcessor.from_pretrained(self.model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                torch_dtype=torch.float16 if self.device == 'cuda' else torch.float32,
-                device_map=self.device,
-                trust_remote_code=True
-            )
+            self.processor = AutoProcessor.from_pretrained(self.model_name, trust_remote_code=True)
+            
+            # Try different model classes
+            try:
+                # First try with Vision2Seq model class which is more appropriate for VL models
+                self.model = AutoModelForVision2Seq.from_pretrained(
+                    self.model_name,
+                    torch_dtype=torch.float16 if self.device == 'cuda' else torch.float32,
+                    device_map=self.device,
+                    trust_remote_code=True
+                )
+                logger.info("Loaded model using AutoModelForVision2Seq")
+            except Exception as e:
+                logger.warning(f"Failed to load with AutoModelForVision2Seq: {e}")
+                # Fall back to CausalLM
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_name,
+                    torch_dtype=torch.float16 if self.device == 'cuda' else torch.float32,
+                    device_map=self.device,
+                    trust_remote_code=True
+                )
+                logger.info("Loaded model using AutoModelForCausalLM")
+            
             logger.info(f"Model loaded successfully")
         except Exception as e:
             logger.error(f"Error loading model: {e}")
@@ -583,7 +599,7 @@ def main():
     parser = argparse.ArgumentParser(description="R1-Omni Emotion Detector")
     parser.add_argument("--video", required=True, help="Path to the video file")
     parser.add_argument("--frames", type=int, default=5, help="Number of frames to analyze")
-    parser.add_argument("--model", default="HumanMLLM/R1-Omni-0.5B", help="Model name or path")
+    parser.add_argument("--model", default="StarJiaxing/R1-Omni-0.5B", help="Model name or path")
     args = parser.parse_args()
     
     # Initialize the detector

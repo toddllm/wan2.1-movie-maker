@@ -6,8 +6,8 @@
 cd "$(dirname "$0")"
 
 # Default values
-R1V_MODEL="Qwen/Qwen2-VL-7B"
-R1OMNI_MODEL="HumanMLLM/R1-Omni-0.5B"
+R1V_MODEL="Qwen/Qwen-VL-Chat"
+R1OMNI_MODEL="StarJiaxing/R1-Omni-0.5B"
 TEST_IMAGE=""
 TEST_VIDEO=""
 DEVICE=""

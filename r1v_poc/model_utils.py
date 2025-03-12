@@ -16,7 +16,7 @@ import logging
 import torch
 import json
 from pathlib import Path
-from transformers import AutoProcessor, AutoModelForCausalLM
+from transformers import AutoProcessor, AutoModelForCausalLM, AutoModelForVision2Seq
 
 # Configure logging
 logging.basicConfig(
@@ -33,11 +33,14 @@ class ModelCache:
     """
     Cache for loaded models to avoid reloading the same model multiple times.
     """
+    _instance = None
     
-    def __init__(self):
-        """Initialize the model cache."""
-        self.models = {}
-        self.processors = {}
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ModelCache, cls).__new__(cls)
+            cls._instance.models = {}
+            cls._instance.processors = {}
+        return cls._instance
     
     def get_model(self, model_name, device=None):
         """
@@ -48,44 +51,49 @@ class ModelCache:
             device (str): Device to run the model on ('cuda' or 'cpu').
             
         Returns:
-            tuple: (model, processor) for the requested model.
+            tuple: (model, processor) for the model.
         """
-        # Determine device
         if device is None:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            device = "cuda" if torch.cuda.is_available() else "cpu"
         
-        # Create a cache key that includes the model name and device
         cache_key = f"{model_name}_{device}"
         
-        # Check if the model is already in the cache
         if cache_key in self.models and cache_key in self.processors:
             logger.info(f"Using cached model: {model_name} on {device}")
             return self.models[cache_key], self.processors[cache_key]
         
-        # Load the model and processor
         logger.info(f"Loading model: {model_name} on {device}")
         try:
-            processor = AutoProcessor.from_pretrained(model_name)
-            model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
-                device_map=device,
-                trust_remote_code=True
-            )
+            # First try to load the processor
+            processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
             
-            # Add to cache
+            # Try loading with Vision2Seq first (for newer multimodal models)
+            try:
+                logger.info(f"Attempting to load {model_name} with AutoModelForVision2Seq")
+                model = AutoModelForVision2Seq.from_pretrained(
+                    model_name, 
+                    trust_remote_code=True,
+                    device_map=device
+                )
+                logger.info(f"Successfully loaded {model_name} with AutoModelForVision2Seq")
+            except Exception as e:
+                logger.warning(f"Failed to load with AutoModelForVision2Seq: {e}")
+                # Fall back to CausalLM
+                logger.info(f"Attempting to load {model_name} with AutoModelForCausalLM")
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_name, 
+                    trust_remote_code=True,
+                    device_map=device
+                )
+                logger.info(f"Successfully loaded {model_name} with AutoModelForCausalLM")
+            
             self.models[cache_key] = model
             self.processors[cache_key] = processor
-            
-            logger.info(f"Model loaded successfully: {model_name}")
             return model, processor
-        
+            
         except Exception as e:
             logger.error(f"Error loading model {model_name}: {e}")
             raise
-
-# Create a global model cache
-model_cache = ModelCache()
 
 def load_model(model_name, device=None):
     """
@@ -96,9 +104,10 @@ def load_model(model_name, device=None):
         device (str): Device to run the model on ('cuda' or 'cpu').
         
     Returns:
-        tuple: (model, processor) for the requested model.
+        tuple: (model, processor) for the model.
     """
-    return model_cache.get_model(model_name, device)
+    cache = ModelCache()
+    return cache.get_model(model_name, device)
 
 def get_r1v_model(model_name=None, device=None):
     """
@@ -113,7 +122,7 @@ def get_r1v_model(model_name=None, device=None):
     """
     # Use default model if not specified
     if model_name is None:
-        model_name = "Qwen/Qwen2-VL-7B"
+        model_name = "Qwen/Qwen-VL-Chat"
     
     return load_model(model_name, device)
 
@@ -130,7 +139,7 @@ def get_r1omni_model(model_name=None, device=None):
     """
     # Use default model if not specified
     if model_name is None:
-        model_name = "HumanMLLM/R1-Omni-0.5B"
+        model_name = "StarJiaxing/R1-Omni-0.5B"
     
     return load_model(model_name, device)
 
@@ -199,8 +208,8 @@ def save_model_config(config_path, r1v_model=None, r1omni_model=None):
         r1omni_model (str): The name or path of the R1-Omni model.
     """
     config = {
-        "r1v_model": r1v_model or "Qwen/Qwen2-VL-7B",
-        "r1omni_model": r1omni_model or "HumanMLLM/R1-Omni-0.5B",
+        "r1v_model": r1v_model or "Qwen/Qwen-VL-Chat",
+        "r1omni_model": r1omni_model or "StarJiaxing/R1-Omni-0.5B",
         "device": "cuda" if torch.cuda.is_available() else "cpu"
     }
     
@@ -222,8 +231,8 @@ def load_model_config(config_path):
         dict: The model configuration.
     """
     default_config = {
-        "r1v_model": "Qwen/Qwen2-VL-7B",
-        "r1omni_model": "HumanMLLM/R1-Omni-0.5B",
+        "r1v_model": "Qwen/Qwen-VL-Chat",
+        "r1omni_model": "StarJiaxing/R1-Omni-0.5B",
         "device": "cuda" if torch.cuda.is_available() else "cpu"
     }
     
