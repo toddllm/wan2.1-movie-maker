@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A HDMY 5 Movie: Extended Universe Cut</title>
+    <style>
+        body {
+            font-family: 'Minecraft', 'Courier New', monospace;
+            background-color: #111;
+            color: #eee;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background-color: #222;
+            margin-bottom: 30px;
+            border-bottom: 4px solid #555;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #5af;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin: 0;
+        }
+        h2 {
+            font-size: 1.8em;
+            color: #f5a;
+            border-bottom: 2px solid #444;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        .subtitle {
+            font-size: 1.5em;
+            color: #af5;
+            margin: 10px 0 30px 0;
+        }
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .video-item {
+            background-color: #222;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+        .video-item:hover {
+            transform: translateY(-5px);
+        }
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+        }
+        .video-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .video-info {
+            padding: 15px;
+        }
+        .video-title {
+            font-size: 1.1em;
+            margin: 0 0 10px 0;
+            color: #fff;
+        }
+        .video-description {
+            font-size: 0.9em;
+            color: #aaa;
+            margin: 0;
+        }
+        .section-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        .section-nav a {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #333;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        .section-nav a:hover {
+            background-color: #444;
+        }
+        .progress-container {
+            background-color: #222;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .progress-bar {
+            height: 30px;
+            background-color: #333;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #5af, #f5a);
+            width: 0%; /* Will be updated via JavaScript */
+            transition: width 0.5s ease;
+        }
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            margin-top: 50px;
+            background-color: #222;
+            border-top: 4px solid #555;
+        }
+        .pixelated {
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        @media (max-width: 768px) {
+            .video-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>A HDMY 5 Movie</h1>
+        <div class="subtitle">Extended Universe Cut</div>
+    </header>
+
+    <div class="container">
+        <div class="progress-container">
+            <h3>Generation Progress</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">0/400 clips generated (0%)</div>
+        </div>
+
+        <div class="section-nav">
+            <a href="#opening-credits">Opening Credits</a>
+            <a href="#prologue">Prologue</a>
+            <a href="#act1">Act I</a>
+            <a href="#interlude1">Interlude I</a>
+            <a href="#act2">Act II</a>
+            <a href="#interlude2">Interlude II</a>
+            <a href="#act3">Act III</a>
+            <a href="#epilogue">Epilogue</a>
+            <a href="#credits">Credits</a>
+        </div>
+
+        <h2 id="opening-credits">Opening Credits: The Legend of Casta</h2>
+        <div class="video-grid" id="opening-credits-grid">
+            <!-- Videos will be dynamically added here -->
+            <div class="video-item">
+                <div class="video-container">
+                    <div style="background-color: #333; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                        <p>Generating...</p>
+                    </div>
+                </div>
+                <div class="video-info">
+                    <h3 class="video-title">Opening Scene</h3>
+                    <p class="video-description">Epic orchestral music plays as pixelated text scrolls across a starry background...</p>
+                </div>
+            </div>
+        </div>
+
+        <h2 id="prologue">Prologue: The Golden Magma Egg</h2>
+        <div class="video-grid" id="prologue-grid">
+            <!-- Videos will be dynamically added here -->
+            <div class="video-item">
+                <div class="video-container">
+                    <div style="background-color: #333; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                        <p>Generating...</p>
+                    </div>
+                </div>
+                <div class="video-info">
+                    <h3 class="video-title">The Ancient Developers</h3>
+                    <p class="video-description">Deep beneath a pixelated world, ancient game developers work on their most ambitious creation...</p>
+                </div>
+            </div>
+        </div>
+
+        <h2 id="act1">Act I: Assembly</h2>
+        <div class="video-grid" id="act1-grid">
+            <!-- Videos will be dynamically added here -->
+            <div class="video-item">
+                <div class="video-container">
+                    <div style="background-color: #333; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                        <p>Generating...</p>
+                    </div>
+                </div>
+                <div class="video-info">
+                    <h3 class="video-title">Cube City Dawn</h3>
+                    <p class="video-description">The blocky sun rises over Cube City, a bustling pixelated metropolis...</p>
+                </div>
+            </div>
+        </div>
+
+        <h2 id="interlude1">Interlude: The Breach Begins</h2>
+        <div class="video-grid" id="interlude1-grid">
+            <!-- Videos will be dynamically added here -->
+        </div>
+
+        <h2 id="act2">Act II: Preparation</h2>
+        <div class="video-grid" id="act2-grid">
+            <!-- Videos will be dynamically added here -->
+        </div>
+
+        <h2 id="interlude2">Interlude: The Watchers</h2>
+        <div class="video-grid" id="interlude2-grid">
+            <!-- Videos will be dynamically added here -->
+        </div>
+
+        <h2 id="act3">Act III: Confrontation</h2>
+        <div class="video-grid" id="act3-grid">
+            <!-- Videos will be dynamically added here -->
+        </div>
+
+        <h2 id="epilogue">Epilogue: Legendary</h2>
+        <div class="video-grid" id="epilogue-grid">
+            <!-- Videos will be dynamically added here -->
+        </div>
+
+        <h2 id="credits">Mid & Post Credits Scenes</h2>
+        <div class="video-grid" id="credits-grid">
+            <!-- Videos will be dynamically added here -->
+        </div>
+    </div>
+
+    <footer>
+        <p>A HDMY 5 Movie: Extended Universe Cut</p>
+        <p>THE AMAZING 3 vs. CASTA: ORIGINS OF POWER</p>
+        <p>Generated with Wan2.1 Video Generation</p>
+    </footer>
+
+    <script>
+        // This script would normally update the progress and add videos as they're generated
+        // For now, it just simulates progress
+        
+        let totalClips = 400;
+        let generatedClips = 0;
+        
+        function updateProgress(generated) {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            const percentage = Math.floor((generated / totalClips) * 100);
+            progressFill.style.width = percentage + '%';
+            progressText.textContent = `${generated}/${totalClips} clips generated (${percentage}%)`;
+        }
+        
+        // Simulate initial progress
+        updateProgress(generatedClips);
+        
+        // In a real implementation, this would be replaced with actual checks for new videos
+        // and would update the grid sections with the actual video elements
+    </script>
+</body>
+</html> 
