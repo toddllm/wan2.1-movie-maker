@@ -1,0 +1,28 @@
+# HDMY 5 Movie Poster Generator Service
+#
+# This systemd service file runs the extract_frames.py script in monitor mode,
+# which automatically extracts frames from video files to use as poster images.
+#
+# Installation:
+#   1. Copy this file to /etc/systemd/system/
+#   2. Run: sudo systemctl daemon-reload
+#   3. Run: sudo systemctl enable hdmy5movie_poster_service.service
+#   4. Run: sudo systemctl start hdmy5movie_poster_service.service
+#
+# Logs:
+#   - Service logs: sudo journalctl -u hdmy5movie_poster_service.service
+#   - Script logs: /home/tdeshane/movie_maker/logs/poster_service.log
+
+[Unit]
+Description=HDMY 5 Movie Poster Generator Service
+After=network.target
+
+[Service]
+Type=simple
+User=tdeshane
+WorkingDirectory=/home/tdeshane/movie_maker
+ExecStart=/usr/bin/python3 /home/tdeshane/movie_maker/extract_frames.py --monitor --interval 30 --log-file logs/poster_service.log
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target 

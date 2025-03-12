@@ -10,6 +10,7 @@ A web interface for generating and combining 10-second videos using the Wan2.1 t
 - Batch process multiple prompts
 - GPU usage monitoring to prevent conflicts
 - Dark mode UI for reduced eye strain
+- Automatic poster image generation for video thumbnails
 
 ## Requirements
 
@@ -67,6 +68,20 @@ This will start a test instance on port 5002 (or any specified port).
 ./batch_generate.py prompts.txt --seconds=1
 ```
 
+### Poster Image Generation
+
+The system includes an automatic poster image generation service that extracts frames from videos to use as thumbnails.
+
+```bash
+# Run manually (one-time)
+python3 extract_frames.py
+
+# Run in monitor mode
+python3 extract_frames.py --monitor --interval 30
+```
+
+For more details, see [README_POSTER_SERVICE.md](README_POSTER_SERVICE.md).
+
 ## Project Structure
 
 - `app.py`: Main Flask application
@@ -74,10 +89,15 @@ This will start a test instance on port 5002 (or any specified port).
 - `test_server.sh`: Script to start a test server on a specified port
 - `enhance_prompts.py`: Script to enhance prompts
 - `batch_generate.py`: Script for batch processing
+- `extract_frames.py`: Script to extract frames from videos for poster images
+- `hdmy5movie_poster_service.service`: Systemd service file for poster generation
 - `templates/`: HTML templates for the web interface
 - `static/`: Static files (CSS, JS)
 - `clips/`: Generated video clips
 - `movies/`: Combined movies
+- `hdmy5movie_videos/`: Video files for the HDMY 5 Movie project
+- `hdmy5movie_posters/`: Poster images for the HDMY 5 Movie project
+- `logs/`: Log files for various services
 
 ## License
 
