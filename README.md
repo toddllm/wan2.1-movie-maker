@@ -11,6 +11,7 @@ A web interface for generating and combining 10-second videos using the Wan2.1 t
 - GPU usage monitoring to prevent conflicts
 - Dark mode UI for reduced eye strain
 - Automatic poster image generation for video thumbnails
+- Restart capability for interrupted generation processes
 
 ## Requirements
 
@@ -82,6 +83,18 @@ python3 extract_frames.py --monitor --interval 30
 
 For more details, see [README_POSTER_SERVICE.md](README_POSTER_SERVICE.md).
 
+### Restarting Generation Process
+
+If the video generation process stops unexpectedly, you can restart it from where it left off:
+
+```bash
+./restart_hdmy5movie_generation.sh
+```
+
+This script will automatically determine the next prompt to process and create any necessary directories.
+
+For more details, see [README_RESTART_GENERATION.md](README_RESTART_GENERATION.md).
+
 ## Project Structure
 
 - `app.py`: Main Flask application
@@ -91,6 +104,7 @@ For more details, see [README_POSTER_SERVICE.md](README_POSTER_SERVICE.md).
 - `batch_generate.py`: Script for batch processing
 - `extract_frames.py`: Script to extract frames from videos for poster images
 - `hdmy5movie_poster_service.service`: Systemd service file for poster generation
+- `restart_hdmy5movie_generation.sh`: Script to restart the generation process
 - `templates/`: HTML templates for the web interface
 - `static/`: Static files (CSS, JS)
 - `clips/`: Generated video clips
