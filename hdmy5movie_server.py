@@ -29,6 +29,9 @@ class HDMYMovieHandler(SimpleHTTPRequestHandler):
         if self.path == '/api/progress':
             self.send_progress()
             return
+        elif self.path == '/api/videos':
+            self.send_videos_list()
+            return
         
         # For all other requests, use the default handler
         return super().do_GET()
@@ -85,6 +88,45 @@ class HDMYMovieHandler(SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(progress_data).encode())
+
+    def send_videos_list(self):
+        """Send a list of all videos as JSON."""
+        videos_data = {
+            "01_opening_credits": [],
+            "02_prologue": [],
+            "03_act1": [],
+            "04_interlude1": [],
+            "05_act2": [],
+            "06_interlude2": [],
+            "07_act3": [],
+            "08_epilogue": [],
+            "09_credits": []
+        }
+        
+        # Scan each section directory for MP4 files
+        for section in videos_data.keys():
+            section_dir = os.path.join(self.directory, 'hdmy5movie_videos', section)
+            if os.path.exists(section_dir):
+                # Get all MP4 files and sort them
+                mp4_files = [f for f in os.listdir(section_dir) if f.endswith('.mp4')]
+                mp4_files.sort()
+                
+                # Add each file to the list with its path
+                for mp4_file in mp4_files:
+                    video_path = f"hdmy5movie_videos/{section}/{mp4_file}"
+                    videos_data[section].append({
+                        "path": video_path,
+                        "filename": mp4_file,
+                        "title": f"Scene {mp4_file.split('_')[0]}",
+                        "description": f"Video clip {mp4_file.replace('.mp4', '')}"
+                    })
+        
+        # Send the videos data as JSON
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(json.dumps(videos_data).encode())
 
 def update_html_with_js():
     """Update the HTML file to include JavaScript for auto-refreshing progress."""

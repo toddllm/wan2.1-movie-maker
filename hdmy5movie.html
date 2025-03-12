@@ -261,132 +261,114 @@
     </footer>
 
     <script>
-        // This script would normally update the progress and add videos as they're generated
-        // For now, it just simulates progress
+        // This script updates the progress and adds videos as they're generated
         
-        let totalClips = 400;
-        let generatedClips = 0;
+        // Map section IDs to directory names
+        const sectionMap = {
+            'opening-credits': '01_opening_credits',
+            'prologue': '02_prologue',
+            'act1': '03_act1',
+            'interlude1': '04_interlude1',
+            'act2': '05_act2',
+            'interlude2': '06_interlude2',
+            'act3': '07_act3',
+            'epilogue': '08_epilogue',
+            'credits': '09_credits'
+        };
         
-        function updateProgress(generated) {
+        // Reverse map for looking up section IDs from directory names
+        const dirToSectionMap = {};
+        for (const [key, value] of Object.entries(sectionMap)) {
+            dirToSectionMap[value] = key;
+        }
+        
+        // Function to update progress bar
+        function updateProgress(current, total) {
             const progressFill = document.getElementById('progressFill');
             const progressText = document.getElementById('progressText');
             
-            const percentage = Math.floor((generated / totalClips) * 100);
+            const percentage = Math.floor((current / total) * 100);
             progressFill.style.width = percentage + '%';
-            progressText.textContent = `${generated}/${totalClips} clips generated (${percentage}%)`;
+            progressText.textContent = `${current}/${total} clips generated (${percentage}%)`;
         }
         
-        // Simulate initial progress
-        updateProgress(generatedClips);
+        // Function to create a video element
+        function createVideoElement(videoData) {
+            const videoItem = document.createElement('div');
+            videoItem.className = 'video-item';
+            videoItem.innerHTML = `
+                <div class="video-container">
+                    <video controls>
+                        <source src="${videoData.path}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                <div class="video-info">
+                    <h3 class="video-title">${videoData.title}</h3>
+                    <p class="video-description">${videoData.description}</p>
+                </div>
+            `;
+            return videoItem;
+        }
         
-        // Function to scan for videos in a section
-        function scanForVideos(section) {
-            const sectionMap = {
-                'opening-credits': '01_opening_credits',
-                'prologue': '02_prologue',
-                'act1': '03_act1',
-                'interlude1': '04_interlude1',
-                'act2': '05_act2',
-                'interlude2': '06_interlude2',
-                'act3': '07_act3',
-                'epilogue': '08_epilogue',
-                'credits': '09_credits'
-            };
+        // Function to update a section with videos
+        function updateSectionWithVideos(sectionId, videos) {
+            const sectionGrid = document.getElementById(`${sectionId}-grid`);
+            if (!sectionGrid) return;
             
-            const sectionDir = sectionMap[section];
-            if (!sectionDir) return;
-            
-            // This would normally fetch a list of videos from the server
-            // For now, we'll just check if our known video exists
-            if (section === 'opening-credits') {
-                const videoPath = `hdmy5movie_videos/${sectionDir}/001_001.mp4`;
+            // Clear existing content if we have videos
+            if (videos.length > 0) {
+                sectionGrid.innerHTML = '';
                 
-                // Check if the video element already exists
-                const existingVideo = document.querySelector(`#${section}-grid video source[src="${videoPath}"]`);
-                if (existingVideo) return;
-                
-                // Create a new video element
-                const videoGrid = document.getElementById(`${section}-grid`);
-                if (!videoGrid) return;
-                
-                // Clear any placeholder content
-                videoGrid.innerHTML = '';
-                
-                const videoItem = document.createElement('div');
-                videoItem.className = 'video-item';
-                videoItem.innerHTML = `
-                    <div class="video-container">
-                        <video controls>
-                            <source src="${videoPath}" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
-                    </div>
-                    <div class="video-info">
-                        <h3 class="video-title">Opening Scene</h3>
-                        <p class="video-description">Epic orchestral music plays as pixelated text scrolls across a starry background...</p>
-                    </div>
-                `;
-                
-                videoGrid.appendChild(videoItem);
+                // Add each video to the grid
+                videos.forEach(videoData => {
+                    const videoElement = createVideoElement(videoData);
+                    sectionGrid.appendChild(videoElement);
+                });
             }
         }
         
-        // Scan for videos in all sections
-        function scanAllSections() {
-            const sections = [
-                'opening-credits',
-                'prologue',
-                'act1',
-                'interlude1',
-                'act2',
-                'interlude2',
-                'act3',
-                'epilogue',
-                'credits'
-            ];
-            
-            sections.forEach(section => scanForVideos(section));
+        // Function to fetch videos from the API
+        function fetchVideos() {
+            fetch('/api/videos')
+                .then(response => response.json())
+                .then(data => {
+                    // Process each section
+                    for (const [dirName, videos] of Object.entries(data)) {
+                        const sectionId = dirToSectionMap[dirName];
+                        if (sectionId) {
+                            updateSectionWithVideos(sectionId, videos);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching videos:', error));
         }
         
-        // Initial scan
-        scanAllSections();
-    
-    // Function to fetch progress from the API
-    function fetchProgress() {
-        fetch('/api/progress')
-            .then(response => response.json())
-            .then(data => {
-                // Update progress bar
-                const progressFill = document.getElementById('progressFill');
-                const progressText = document.getElementById('progressText');
-                
-                if (progressFill && progressText) {
-                    progressFill.style.width = data.percentage + '%';
-                    progressText.textContent = `${data.current}/${data.total} clips generated (${data.percentage}%)`;
-                }
-                
-                // Check for new videos
-                scanAllSections();
-            })
-            .catch(error => console.error('Error fetching progress:', error));
-    }
-    
-    // Function to check for new videos
-    function checkForNewVideos() {
-        // Scan for new videos
-        scanAllSections();
+        // Function to fetch progress from the API
+        function fetchProgress() {
+            fetch('/api/progress')
+                .then(response => response.json())
+                .then(data => {
+                    // Update progress bar
+                    updateProgress(data.current, data.total);
+                    
+                    // Also fetch videos to ensure we have the latest
+                    fetchVideos();
+                })
+                .catch(error => console.error('Error fetching progress:', error));
+        }
         
-        // Reload the page every 5 minutes
+        // Initial fetch for videos and progress
+        fetchVideos();
+        fetchProgress();
+        
+        // Fetch progress and videos every 30 seconds
+        setInterval(fetchProgress, 30000);
+        
+        // Reload the page every 5 minutes to ensure fresh content
         setTimeout(() => {
             window.location.reload();
         }, 5 * 60 * 1000);
-    }
-    
-    // Fetch progress every 30 seconds
-    setInterval(fetchProgress, 30000);
-    
-    // Initial fetch
-    fetchProgress();
-</script>
+    </script>
 </body>
 </html> 
