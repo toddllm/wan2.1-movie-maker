@@ -16,6 +16,7 @@ A web interface for generating and combining 10-second videos using the Wan2.1 t
 - Voice exploration and generation tools for creating and managing voice samples
 - Voice status monitoring for tracking generation progress
 - IP address monitoring for servers with dynamic IPs
+- Enhanced voice generation with female-dominant voice sets
 
 ## Requirements
 
@@ -146,6 +147,32 @@ The system includes scripts to monitor the server's public IP address and send n
 A cron job is set up to run this check automatically every hour.
 
 For more details, see [IP_MONITOR_README.md](IP_MONITOR_README.md).
+
+## Voice Generation
+
+### Generating New Voice Sets
+
+To generate a new set of 100 voices with 80% female voices:
+
+```bash
+./generate_more_female_voices.sh
+```
+
+This script generates:
+- 80 female voices with higher expressivity
+- 20 male voices with varied characteristics
+
+For more details, see [VOICE_GENERATION.md](VOICE_GENERATION.md).
+
+### Exploring Generated Voices
+
+Start the web server and navigate to the Voice Explorer:
+
+```bash
+./start_server.sh
+```
+
+Then open http://localhost:8000/voice_explorer.html in your browser.
 
 ## Project Structure
 
