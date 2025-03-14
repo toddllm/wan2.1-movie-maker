@@ -12,6 +12,7 @@ A web interface for generating and combining 10-second videos using the Wan2.1 t
 - Dark mode UI for reduced eye strain
 - Automatic poster image generation for video thumbnails
 - Restart capability for interrupted generation processes
+- Voice sample feedback system for collecting and processing user feedback
 
 ## Requirements
 
@@ -95,6 +96,20 @@ This script will automatically determine the next prompt to process and create a
 
 For more details, see [README_RESTART_GENERATION.md](README_RESTART_GENERATION.md).
 
+### Voice Sample Feedback System
+
+The system includes a feedback collection and processing system for voice samples:
+
+```bash
+# Start the feedback server
+python3 feedback_server.py
+
+# Update voice sample descriptions based on feedback
+python3 update_descriptions.py
+```
+
+For more details, see [FEEDBACK_SYSTEM.md](FEEDBACK_SYSTEM.md).
+
 ## Project Structure
 
 - `app.py`: Main Flask application
@@ -105,6 +120,10 @@ For more details, see [README_RESTART_GENERATION.md](README_RESTART_GENERATION.m
 - `extract_frames.py`: Script to extract frames from videos for poster images
 - `hdmy5movie_poster_service.service`: Systemd service file for poster generation
 - `restart_hdmy5movie_generation.sh`: Script to restart the generation process
+- `feedback_server.py`: Server for collecting voice sample feedback
+- `update_descriptions.py`: Script for updating voice sample descriptions based on feedback
+- `voice_feedback_db.json`: Database of user feedback on voice samples
+- `voice_samples.js`: Voice sample data with descriptions
 - `templates/`: HTML templates for the web interface
 - `static/`: Static files (CSS, JS)
 - `clips/`: Generated video clips
