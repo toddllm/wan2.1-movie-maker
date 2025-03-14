@@ -128,4 +128,4 @@ enhanced_prompts/
 .idea/
 .vscode/
 *.swp
-*.swo 
+*.swo mailgun_config.sh

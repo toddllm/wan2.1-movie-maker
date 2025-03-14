@@ -13,6 +13,9 @@ A web interface for generating and combining 10-second videos using the Wan2.1 t
 - Automatic poster image generation for video thumbnails
 - Restart capability for interrupted generation processes
 - Voice sample feedback system for collecting and processing user feedback
+- Voice exploration and generation tools for creating and managing voice samples
+- Voice status monitoring for tracking generation progress
+- IP address monitoring for servers with dynamic IPs
 
 ## Requirements
 
@@ -110,6 +113,40 @@ python3 update_descriptions.py
 
 For more details, see [FEEDBACK_SYSTEM.md](FEEDBACK_SYSTEM.md).
 
+### Voice Exploration and Generation
+
+The system includes tools for exploring and generating voice samples:
+
+```bash
+# Start the voice explorer interface
+python3 -m http.server 8000
+# Then navigate to http://localhost:8000/voice_explorer.html
+
+# Generate voice samples with different parameters
+./explore_voices.sh --quick
+
+# Monitor voice generation status
+./start_status_server.sh
+```
+
+For more details, see [VOICE_SYSTEM.md](VOICE_SYSTEM.md).
+
+### IP Address Monitoring
+
+The system includes scripts to monitor the server's public IP address and send notifications when it changes:
+
+```bash
+# Check for IP changes manually
+./check_ip_change.sh
+
+# Run the complete monitoring process
+./monitor_ip_changes.sh
+```
+
+A cron job is set up to run this check automatically every hour.
+
+For more details, see [IP_MONITOR_README.md](IP_MONITOR_README.md).
+
 ## Project Structure
 
 - `app.py`: Main Flask application
@@ -124,12 +161,25 @@ For more details, see [FEEDBACK_SYSTEM.md](FEEDBACK_SYSTEM.md).
 - `update_descriptions.py`: Script for updating voice sample descriptions based on feedback
 - `voice_feedback_db.json`: Database of user feedback on voice samples
 - `voice_samples.js`: Voice sample data with descriptions
+- `voice_explorer.html`: Web interface for exploring voice samples
+- `listen.html`: Simplified interface for playing voice samples
+- `voice_status.html`: Interface for monitoring voice generation status
+- `start_feedback_server.sh`: Script to start the feedback server
+- `start_status_server.sh`: Script to start the status server
+- `explore_voices.sh`: Script to generate voice samples with different parameters
+- `check_files.py`: Script to check and monitor voice generation files
+- `check_ip_change.sh`: Script to check for IP address changes
+- `send_ip_notification.sh`: Script to send IP change notifications
+- `monitor_ip_changes.sh`: Combined script for IP monitoring
 - `templates/`: HTML templates for the web interface
 - `static/`: Static files (CSS, JS)
 - `clips/`: Generated video clips
 - `movies/`: Combined movies
 - `hdmy5movie_videos/`: Video files for the HDMY 5 Movie project
 - `hdmy5movie_posters/`: Poster images for the HDMY 5 Movie project
+- `hdmy5movie_voices/`: Voice samples for the HDMY 5 Movie project
+- `voices/`: Directory containing general voice samples
+- `voice_poc/`: Directory containing voice generation proof of concept implementations
 - `logs/`: Log files for various services
 
 ## License
