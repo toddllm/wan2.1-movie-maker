@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSM Voice Generation Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #e0e0e0;
+            background-color: #121212;
+        }
+        h1, h2, h3 {
+            color: #ffffff;
+            margin-top: 30px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        .status-container {
+            border: 1px solid #444;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #1e1e1e;
+            margin-bottom: 30px;
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #2d2d2d;
+            border-radius: 4px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 25px;
+            background-color: #4285f4;
+            text-align: center;
+            line-height: 25px;
+            color: white;
+            font-weight: bold;
+            transition: width 0.5s;
+        }
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #4CAF50;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #aaaaaa;
+        }
+        .sample-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .sample-cell {
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 5px;
+            text-align: center;
+            font-size: 12px;
+            position: relative;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .sample-cell:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+        .sample-complete {
+            background-color: #1e3a20;
+            border-color: #4CAF50;
+        }
+        .sample-pending {
+            background-color: #2d2d2d;
+            opacity: 0.6;
+        }
+        .sample-cell:hover .sample-details {
+            display: block;
+        }
+        .sample-details {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #323232;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 8px;
+            z-index: 100;
+            width: 180px;
+            text-align: left;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+        .sample-details:after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #aaaaaa;
+        }
+        .filter-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        select, input, button {
+            padding: 8px 12px;
+            margin: 5px;
+            font-size: 16px;
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+        option {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #5294ff;
+            box-shadow: 0 0 10px rgba(66, 133, 244, 0.5);
+        }
+        .auto-refresh {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+        }
+        .last-updated {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+            text-align: right;
+        }
+        .refresh-animation {
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .navigation {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .nav-link {
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .nav-link:hover {
+            background-color: #3d3d3d;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>CSM Voice Generation Status</h1>
+    
+    <div class="navigation">
+        <a href="listen.html" class="nav-link">← Basic Player</a>
+        <a href="voice_explorer.html" class="nav-link">Voice Explorer →</a>
+    </div>
+    
+    <div class="status-container">
+        <h2>Generation Progress</h2>
+        
+        <div class="progress-bar-container">
+            <div id="progressBar" class="progress-bar" style="width: 0%">0%</div>
+        </div>
+        
+        <div class="filter-controls">
+            <div>
+                <button onclick="refreshData()">Refresh Data</button>
+            </div>
+            <div>
+                <select id="speakerFilter" onchange="filterSamples()">
+                    <option value="all">All Speakers</option>
+                </select>
+            </div>
+            <div>
+                <select id="tempFilter" onchange="filterSamples()">
+                    <option value="all">All Temperatures</option>
+                </select>
+            </div>
+            <div>
+                <select id="topkFilter" onchange="filterSamples()">
+                    <option value="all">All TopK Values</option>
+                </select>
+            </div>
+            <div class="auto-refresh">
+                <input type="checkbox" id="autoRefresh" checked>
+                <label for="autoRefresh">Auto Refresh</label>
+                <select id="refreshInterval">
+                    <option value="5000">5 seconds</option>
+                    <option value="15000" selected>15 seconds</option>
+                    <option value="30000">30 seconds</option>
+                    <option value="60000">1 minute</option>
+                </select>
+            </div>
+        </div>
+        
+        <p class="last-updated">Last updated: <span id="lastUpdated">Never</span></p>
+        
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-value" id="completedCount">0</div>
+                <div class="stat-label">Samples Generated</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="pendingCount">0</div>
+                <div class="stat-label">Samples Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="uniqueSpeakers">0</div>
+                <div class="stat-label">Unique Speakers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="estimatedTime">--:--</div>
+                <div class="stat-label">Est. Completion Time</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-container">
+        <h2>Sample Generation Status</h2>
+        <p>Hover over each sample cell to see details. Click to listen when available.</p>
+        
+        <div class="sample-grid" id="sampleGrid">
+            <div class="loading">Loading sample status...</div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let allSamples = [];
+        let statsData = {};
+        let lastRefreshTime = null;
+        let refreshIntervalId = null;
+        
+        // API endpoints
+        const API_HOST = window.location.hostname;
+        const API_PORT = 8000; // Assuming we'll run the Python server on port 8000
+        const API_BASE = `http://${API_HOST}:${API_PORT}`;
+        const VOICE_STATUS_API = `${API_BASE}/api/voice-status`;
+        const SAMPLE_STATS_API = `${API_BASE}/api/sample-stats`;
+        
+        // Initialize the page
+        function init() {
+            // Set up auto-refresh
+            document.getElementById('autoRefresh').addEventListener('change', toggleAutoRefresh);
+            document.getElementById('refreshInterval').addEventListener('change', updateRefreshInterval);
+            
+            // Initial data load
+            refreshData();
+            
+            // Start auto-refresh if checked
+            toggleAutoRefresh();
+        }
+        
+        // Toggle auto-refresh based on checkbox
+        function toggleAutoRefresh() {
+            const autoRefresh = document.getElementById('autoRefresh').checked;
+            
+            if (autoRefresh) {
+                updateRefreshInterval();
+            } else if (refreshIntervalId) {
+                clearInterval(refreshIntervalId);
+                refreshIntervalId = null;
+            }
+        }
+        
+        // Update the refresh interval
+        function updateRefreshInterval() {
+            if (refreshIntervalId) {
+                clearInterval(refreshIntervalId);
+            }
+            
+            const interval = parseInt(document.getElementById('refreshInterval').value);
+            refreshIntervalId = setInterval(refreshData, interval);
+        }
+        
+        // Refresh all data
+        function refreshData() {
+            // Add refresh animation
+            const refreshButton = document.querySelector('button');
+            refreshButton.innerHTML = '<span class="refresh-animation">↻</span> Refreshing...';
+            
+            // Fetch sample status
+            fetch(VOICE_STATUS_API)
+                .then(response => response.json())
+                .then(data => {
+                    allSamples = data;
+                    updateSampleGrid(allSamples);
+                    populateFilters();
+                })
+                .catch(error => {
+                    console.error('Error fetching voice status:', error);
+                    document.getElementById('sampleGrid').innerHTML = `
+                        <div class="loading">Error loading sample status: ${error.message}<br>
+                        Make sure the status server is running on port ${API_PORT}</div>`;
+                });
+            
+            // Fetch overall stats
+            fetch(SAMPLE_STATS_API)
+                .then(response => response.json())
+                .then(data => {
+                    statsData = data;
+                    updateStats(statsData);
+                })
+                .catch(error => {
+                    console.error('Error fetching sample stats:', error);
+                });
+            
+            // Update last refresh time
+            lastRefreshTime = new Date();
+            document.getElementById('lastUpdated').textContent = formatDateTime(lastRefreshTime);
+            
+            // Reset refresh button after a short delay
+            setTimeout(() => {
+                refreshButton.textContent = 'Refresh Data';
+            }, 1000);
+        }
+        
+        // Update the sample grid with status information
+        function updateSampleGrid(samples) {
+            const grid = document.getElementById('sampleGrid');
+            grid.innerHTML = '';
+            
+            const speakerFilter = document.getElementById('speakerFilter').value;
+            const tempFilter = document.getElementById('tempFilter').value;
+            const topkFilter = document.getElementById('topkFilter').value;
+            
+            // Filter samples based on selected filters
+            const filteredSamples = samples.filter(sample => {
+                return (speakerFilter === 'all' || sample.speaker.toString() === speakerFilter) &&
+                       (tempFilter === 'all' || sample.temperature.toString() === tempFilter) &&
+                       (topkFilter === 'all' || sample.topk.toString() === topkFilter);
+            });
+            
+            if (filteredSamples.length === 0) {
+                grid.innerHTML = '<div class="loading">No samples match the selected filters</div>';
+                return;
+            }
+            
+            // Create a cell for each sample
+            filteredSamples.forEach(sample => {
+                const cell = document.createElement('div');
+                cell.className = sample.exists ? 'sample-cell sample-complete' : 'sample-cell sample-pending';
+                
+                const label = document.createElement('div');
+                label.textContent = `S${sample.speaker}_T${sample.temperature}_K${sample.topk}`;
+                cell.appendChild(label);
+                
+                // Create tooltip with details
+                const details = document.createElement('div');
+                details.className = 'sample-details';
+                details.innerHTML = `
+                    <strong>Speaker:</strong> ${sample.speaker}<br>
+                    <strong>Temperature:</strong> ${sample.temperature}<br>
+                    <strong>TopK:</strong> ${sample.topk}<br>
+                    ${sample.exists ? 
+                        `<strong>Size:</strong> ${sample.size_kb} KB<br>
+                         <strong>Generated:</strong> ${formatDateTime(new Date(sample.modified * 1000))}` 
+                        : '<strong>Status:</strong> Pending'}
+                `;
+                cell.appendChild(details);
+                
+                // Make completed samples clickable to listen
+                if (sample.exists) {
+                    cell.style.cursor = 'pointer';
+                    cell.onclick = () => {
+                        const audioPath = `hdmy5movie_voices/explore/${sample.filename}`;
+                        // Create a temporary audio element to play the sample
+                        const audio = new Audio(audioPath);
+                        audio.play();
+                    };
+                }
+                
+                grid.appendChild(cell);
+            });
+        }
+        
+        // Update the statistics display
+        function updateStats(stats) {
+            // Update progress bar
+            const progressBar = document.getElementById('progressBar');
+            const progress = stats.progress_percent || 0;
+            progressBar.style.width = `${progress}%`;
+            progressBar.textContent = `${progress}%`;
+            
+            // Update stat cards
+            document.getElementById('completedCount').textContent = stats.total_samples || 0;
+            document.getElementById('pendingCount').textContent = (stats.total_expected - stats.total_samples) || 0;
+            document.getElementById('uniqueSpeakers').textContent = stats.unique_speakers?.length || 0;
+            
+            // Calculate estimated completion time
+            if (stats.total_samples > 0 && stats.last_modified) {
+                // Approximate time per sample based on the latest sample
+                const lastSampleTime = new Date(stats.last_modified * 1000);
+                const averageTimePerSample = (lastSampleTime - new Date(0)) / stats.total_samples;
+                
+                // Calculate estimated time to complete all samples
+                const remainingSamples = stats.total_expected - stats.total_samples;
+                const estimatedRemainingSeconds = remainingSamples * (averageTimePerSample / 1000);
+                
+                // Calculate estimated completion time
+                const now = new Date();
+                const completionTime = new Date(now.getTime() + (estimatedRemainingSeconds * 1000));
+                
+                document.getElementById('estimatedTime').textContent = formatDateTime(completionTime);
+            } else {
+                document.getElementById('estimatedTime').textContent = 'Calculating...';
+            }
+        }
+        
+        // Populate filter dropdowns based on existing data
+        function populateFilters() {
+            // Get unique values
+            const speakers = [...new Set(allSamples.map(sample => sample.speaker))].sort((a, b) => a - b);
+            const temperatures = [...new Set(allSamples.map(sample => sample.temperature))].sort((a, b) => a - b);
+            const topkValues = [...new Set(allSamples.map(sample => sample.topk))].sort((a, b) => a - b);
+            
+            // Get current filter values
+            const speakerFilter = document.getElementById('speakerFilter');
+            const tempFilter = document.getElementById('tempFilter');
+            const topkFilter = document.getElementById('topkFilter');
+            
+            const currentSpeaker = speakerFilter.value;
+            const currentTemp = tempFilter.value;
+            const currentTopk = topkFilter.value;
+            
+            // Clear and repopulate speaker filter
+            speakerFilter.innerHTML = '<option value="all">All Speakers</option>';
+            speakers.forEach(speaker => {
+                const option = document.createElement('option');
+                option.value = speaker;
+                option.textContent = `Speaker ${speaker}`;
+                speakerFilter.appendChild(option);
+            });
+            
+            // Clear and repopulate temperature filter
+            tempFilter.innerHTML = '<option value="all">All Temperatures</option>';
+            temperatures.forEach(temp => {
+                const option = document.createElement('option');
+                option.value = temp;
+                option.textContent = `Temp ${temp}`;
+                tempFilter.appendChild(option);
+            });
+            
+            // Clear and repopulate topk filter
+            topkFilter.innerHTML = '<option value="all">All TopK Values</option>';
+            topkValues.forEach(topk => {
+                const option = document.createElement('option');
+                option.value = topk;
+                option.textContent = `TopK ${topk}`;
+                topkFilter.appendChild(option);
+            });
+            
+            // Restore selected values if they still exist
+            if (speakers.includes(parseInt(currentSpeaker))) {
+                speakerFilter.value = currentSpeaker;
+            }
+            
+            if (temperatures.includes(parseFloat(currentTemp))) {
+                tempFilter.value = currentTemp;
+            }
+            
+            if (topkValues.includes(parseInt(currentTopk))) {
+                topkFilter.value = currentTopk;
+            }
+        }
+        
+        // Apply filters to sample grid
+        function filterSamples() {
+            updateSampleGrid(allSamples);
+        }
+        
+        // Format a date-time for display
+        function formatDateTime(date) {
+            if (!date) return 'Unknown';
+            
+            const options = { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                month: 'short',
+                day: 'numeric'
+            };
+            
+            return date.toLocaleString(undefined, options);
+        }
+        
+        // Initialize when the page loads
+        window.onload = init;
+    </script>
+</body>
+</html> 

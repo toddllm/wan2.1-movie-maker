@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSM Voice Player</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #e0e0e0;
+            background-color: #121212;
+        }
+        h1, h2 {
+            color: #ffffff;
+            margin-top: 30px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        .audio-player {
+            margin: 20px 0;
+            width: 100%;
+        }
+        .scene-selector {
+            margin: 20px 0;
+        }
+        select {
+            padding: 8px;
+            font-size: 16px;
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+        option {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+        .player-container {
+            border: 1px solid #444;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #1e1e1e;
+            margin-bottom: 30px;
+        }
+        .voice-sample {
+            border: 1px solid #444;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background-color: #1e1e1e;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .voice-sample:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        .voice-sample h3 {
+            margin-top: 0;
+            color: #ffffff;
+        }
+        .voice-description {
+            font-style: italic;
+            color: #aaaaaa;
+            margin-bottom: 15px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #444;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            background-color: #1a1a1a;
+            margin-right: 5px;
+            color: #aaaaaa;
+        }
+        .tab.active {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+            border: 1px solid #444;
+            padding: 20px;
+            border-radius: 0 5px 5px 5px;
+            background-color: #2d2d2d;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .play-all {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 10px 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .play-all:hover {
+            background-color: #45a049;
+        }
+        .explorer-banner {
+            background-color: #162b47;
+            border-left: 4px solid #4285f4;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        .explorer-banner-text {
+            flex: 1;
+        }
+        .explorer-button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-left: 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .explorer-button:hover {
+            background-color: #5294ff;
+            box-shadow: 0 0 10px rgba(66, 133, 244, 0.5);
+        }
+        /* Style for audio elements */
+        audio {
+            filter: invert(100%);
+            border-radius: 20px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>CSM Voice Player</h1>
+    
+    <div class="explorer-banner">
+        <div class="explorer-banner-text">
+            <h3 style="margin-top: 0; color: #ffffff;">Discover More Voice Options!</h3>
+            <p>Try our comprehensive Voice Explorer to test different speakers, temperatures, and other parameters.</p>
+        </div>
+        <a href="voice_explorer.html" class="explorer-button">Launch Voice Explorer</a>
+    </div>
+    
+    <div class="navigation" style="display: flex; gap: 15px; margin: 15px 0;">
+        <a href="voice_status.html" style="background-color: #2d2d2d; color: #e0e0e0; text-decoration: none; padding: 10px 15px; border-radius: 5px; transition: background-color 0.3s;">
+            Generation Status
+        </a>
+        <a href="voice_explorer.html" style="background-color: #2d2d2d; color: #e0e0e0; text-decoration: none; padding: 10px 15px; border-radius: 5px; transition: background-color 0.3s;">
+            Voice Explorer
+        </a>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="openTab(event, 'scene-tab')">Scene Player</div>
+        <div class="tab" onclick="openTab(event, 'voice-tab')">Voice Comparison</div>
+    </div>
+    
+    <div id="scene-tab" class="tab-content active">
+        <div class="player-container">
+            <h2>Scene Voice Player</h2>
+            <div class="scene-selector">
+                <label for="scene-select">Select Scene: </label>
+                <select id="scene-select" onchange="updateAudioSource()">
+                    <option value="scene_001.wav">Scene 001</option>
+                </select>
+            </div>
+            
+            <div class="audio-player">
+                <audio id="voice-player" controls style="width: 100%;">
+                    <source src="hdmy5movie_voices/scene_001.wav" type="audio/wav">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+            
+            <div>
+                <p><strong>Current File:</strong> <span id="current-file">hdmy5movie_voices/scene_001.wav</span></p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="voice-tab" class="tab-content">
+        <div class="player-container">
+            <h2>Voice Style Comparison</h2>
+            
+            <p>Compare different voice styles for the same text:</p>
+            <p class="voice-description">
+                <em>"Epic orchestral music plays as pixelated text scrolls across a starry background, revealing the legend of Casta, a powerful creature contained in a separate dimension of the HDMY 5 game universe."</em>
+            </p>
+            
+            <button class="play-all" onclick="playAllSequentially()">Play All Voices In Sequence</button>
+            
+            <div id="voice-samples-container">
+                <!-- Voice samples will be added here by JavaScript -->
+            </div>
+            
+            <p style="margin-top: 30px; text-align: center;">
+                <a href="voice_explorer.html" class="explorer-button">Explore More Voice Options</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Voice samples data
+        const voiceSamples = [
+            { id: 0, name: "Voice Style 1 (Default)", description: "Medium-pitched male voice with clear articulation", file: "hdmy5movie_voices/samples/speaker_00.wav" },
+            { id: 1, name: "Voice Style 2", description: "Deep male voice with dramatic tone", file: "hdmy5movie_voices/samples/speaker_01.wav" },
+            { id: 2, name: "Voice Style 3", description: "Female voice with medium pitch", file: "hdmy5movie_voices/samples/speaker_02.wav" },
+            { id: 3, name: "Voice Style 4", description: "Young male voice with higher pitch", file: "hdmy5movie_voices/samples/speaker_03.wav" },
+            { id: 4, name: "Voice Style 5", description: "Authoritative male voice with gravitas", file: "hdmy5movie_voices/samples/speaker_04.wav" },
+            { id: 5, name: "Voice Style 6", description: "Smooth female voice with warm tone", file: "hdmy5movie_voices/samples/speaker_05.wav" },
+            { id: 6, name: "Voice Style 7", description: "Energetic male voice with medium-high pitch", file: "hdmy5movie_voices/samples/speaker_06.wav" },
+            { id: 7, name: "Voice Style 8", description: "Deep female voice with mature tone", file: "hdmy5movie_voices/samples/speaker_07.wav" }
+        ];
+        
+        // Update audio source for scene player
+        function updateAudioSource() {
+            const select = document.getElementById('scene-select');
+            const audioPlayer = document.getElementById('voice-player');
+            const currentFileSpan = document.getElementById('current-file');
+            
+            const selectedFile = select.value;
+            const audioPath = `hdmy5movie_voices/${selectedFile}`;
+            
+            audioPlayer.src = audioPath;
+            currentFileSpan.textContent = audioPath;
+            audioPlayer.load();
+            audioPlayer.play();
+        }
+        
+        // Create voice sample elements
+        function createVoiceSamples() {
+            const container = document.getElementById('voice-samples-container');
+            
+            voiceSamples.forEach(sample => {
+                const sampleDiv = document.createElement('div');
+                sampleDiv.className = 'voice-sample';
+                sampleDiv.innerHTML = `
+                    <h3>${sample.name}</h3>
+                    <p class="voice-description">${sample.description}</p>
+                    <audio id="voice-sample-${sample.id}" controls style="width: 100%;">
+                        <source src="${sample.file}" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                `;
+                container.appendChild(sampleDiv);
+            });
+        }
+        
+        // Switch between tabs
+        function openTab(evt, tabName) {
+            // Hide all tab content
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+            
+            // Remove 'active' class from all tabs
+            const tabs = document.getElementsByClassName('tab');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            // Show the selected tab and add 'active' class to the button
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+        
+        // Play all voice samples sequentially
+        function playAllSequentially() {
+            let currentIndex = 0;
+            
+            function playNext() {
+                if (currentIndex >= voiceSamples.length) {
+                    return; // End of the list
+                }
+                
+                const audioElement = document.getElementById(`voice-sample-${voiceSamples[currentIndex].id}`);
+                audioElement.onended = () => {
+                    currentIndex++;
+                    setTimeout(playNext, 1000); // Wait 1 second between samples
+                };
+                
+                audioElement.play();
+            }
+            
+            playNext();
+        }
+        
+        // Add more scenes dynamically if they exist
+        window.onload = function() {
+            createVoiceSamples();
+        };
+    </script>
+</body>
+</html> 

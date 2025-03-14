@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSM Voice Explorer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #e0e0e0;
+            background-color: #121212;
+        }
+        h1, h2, h3 {
+            color: #ffffff;
+            margin-top: 30px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        .audio-player {
+            margin: 15px 0;
+            width: 100%;
+        }
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        select, input, button {
+            padding: 8px 12px;
+            margin: 5px;
+            font-size: 16px;
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+        option {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .sample-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .voice-sample {
+            border: 1px solid #444;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #1e1e1e;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .voice-sample:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        .voice-sample h3 {
+            margin-top: 0;
+            color: #ffffff;
+            border-bottom: none;
+        }
+        .voice-description {
+            font-style: italic;
+            color: #aaaaaa;
+            margin-bottom: 15px;
+        }
+        .sample-text {
+            background-color: #162b47;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .params {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .param {
+            background-color: #2d2d2d;
+            padding: 5px 10px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            border-radius: 15px;
+            font-size: 14px;
+            color: #cccccc;
+        }
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .filter-group {
+            flex: 1 1 200px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #aaaaaa;
+        }
+        #sampleCount {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #444;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            background-color: #1a1a1a;
+            margin-right: 5px;
+            color: #aaaaaa;
+        }
+        .tab.active {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+            border: 1px solid #444;
+            padding: 20px;
+            border-radius: 0 5px 5px 5px;
+            background-color: #2d2d2d;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .highlight {
+            background-color: #454500;
+            color: #ffff99;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .comparison-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .header-row {
+            font-weight: bold;
+            grid-column: 1 / -1;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        /* Style for audio elements */
+        audio {
+            filter: invert(100%);
+            border-radius: 20px;
+            width: 100%;
+        }
+        /* Feedback form styles */
+        .feedback-form {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #1a1a1a;
+            border-radius: 5px;
+            border: 1px dashed #444;
+        }
+        
+        .feedback-form h4 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #aaa;
+            border-bottom: none;
+        }
+        
+        .feedback-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+        
+        .feedback-option {
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 15px;
+            padding: 3px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .feedback-option:hover {
+            background-color: #444;
+        }
+        
+        .feedback-option.selected {
+            background-color: #2a5d2a;
+            border-color: #4CAF50;
+        }
+        
+        .feedback-notes {
+            width: 100%;
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 5px;
+            font-size: 12px;
+            color: #e0e0e0;
+            margin-bottom: 8px;
+        }
+        
+        .feedback-submit {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .feedback-submit:hover {
+            background-color: #45a049;
+        }
+        
+        .feedback-status {
+            font-size: 12px;
+            margin-top: 5px;
+            color: #4CAF50;
+        }
+        
+        .feedback-summary {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        
+        .feedback-summary h3 {
+            margin-top: 0;
+        }
+        
+        .feedback-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .feedback-table th, .feedback-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        
+        .feedback-table th {
+            background-color: #2d2d2d;
+        }
+        
+        .feedback-count {
+            background-color: #2a5d2a;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CSM Voice Explorer</h1>
+    
+    <div class="navigation" style="display: flex; gap: 15px; margin: 15px 0;">
+        <a href="listen.html" style="background-color: #2d2d2d; color: #e0e0e0; text-decoration: none; padding: 10px 15px; border-radius: 5px; transition: background-color 0.3s;">
+            Basic Player
+        </a>
+        <a href="voice_status.html" style="background-color: #2d2d2d; color: #e0e0e0; text-decoration: none; padding: 10px 15px; border-radius: 5px; transition: background-color 0.3s;">
+            Generation Status
+        </a>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="openTab(event, 'all-samples')">All Voice Samples</div>
+        <div class="tab" onclick="openTab(event, 'speaker-compare')">Speaker Comparison</div>
+        <div class="tab" onclick="openTab(event, 'temp-compare')">Temperature Effects</div>
+        <div class="tab" onclick="openTab(event, 'topk-compare')">TopK Effects</div>
+        <div class="tab" onclick="openTab(event, 'feedback-summary')">Feedback Summary</div>
+        <div class="tab" onclick="openTab(event, 'about')">About</div>
+    </div>
+    
+    <div id="all-samples" class="tab-content active">
+        <div class="sample-text">
+            <p><strong>Sample Text:</strong></p>
+            <p id="sampleTextDisplay"><em>"Epic orchestral music plays as pixelated text scrolls across a starry background, revealing the legend of Casta, a powerful creature contained in a separate dimension."</em></p>
+        </div>
+        
+        <div class="controls">
+            <h3>Filters</h3>
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="speakerFilter">Speaker ID:</label>
+                    <select id="speakerFilter" onchange="filterSamples()">
+                        <option value="all">All Speakers</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="temperatureFilter">Temperature:</label>
+                    <select id="temperatureFilter" onchange="filterSamples()">
+                        <option value="all">All Temperatures</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="topkFilter">Top-K:</label>
+                    <select id="topkFilter" onchange="filterSamples()">
+                        <option value="all">All Top-K</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <button onclick="resetFilters()">Reset Filters</button>
+                </div>
+            </div>
+            <p>Showing <span id="sampleCount">0</span> samples</p>
+        </div>
+        
+        <div id="sampleContainer" class="sample-container">
+            <div class="loading">Loading voice samples...</div>
+        </div>
+    </div>
+    
+    <div id="speaker-compare" class="tab-content">
+        <h2>Speaker Comparison</h2>
+        <p>Compare different speaker IDs with the same temperature (0.9) and top-k (50) values.</p>
+        
+        <div class="sample-text">
+            <p><strong>Sample Text:</strong></p>
+            <p><em>"Epic orchestral music plays as pixelated text scrolls across a starry background, revealing the legend of Casta, a powerful creature contained in a separate dimension."</em></p>
+        </div>
+        
+        <button onclick="playAllSpeakers()">Play All Speakers Sequentially</button>
+        
+        <div id="speakerComparisonContainer" class="comparison-container">
+            <div class="loading">Loading speaker comparison...</div>
+        </div>
+    </div>
+    
+    <div id="temp-compare" class="tab-content">
+        <h2>Temperature Effects</h2>
+        <p>Compare different temperature values with the same speaker ID and top-k (50) value.</p>
+        
+        <div class="controls">
+            <label for="tempCompareSpeaker">Speaker ID:</label>
+            <select id="tempCompareSpeaker" onchange="updateTempComparison()">
+                <!-- Will be populated with speaker options -->
+            </select>
+        </div>
+        
+        <div class="sample-text">
+            <p><strong>Sample Text:</strong></p>
+            <p><em>"Epic orchestral music plays as pixelated text scrolls across a starry background, revealing the legend of Casta, a powerful creature contained in a separate dimension."</em></p>
+        </div>
+        
+        <button onclick="playAllTemperatures()">Play All Temperatures Sequentially</button>
+        
+        <div id="tempComparisonContainer" class="comparison-container">
+            <div class="loading">Loading temperature comparison...</div>
+        </div>
+    </div>
+    
+    <div id="topk-compare" class="tab-content">
+        <h2>Top-K Effects</h2>
+        <p>Compare different top-k values with the same speaker ID and temperature (0.9) value.</p>
+        
+        <div class="controls">
+            <label for="topkCompareSpeaker">Speaker ID:</label>
+            <select id="topkCompareSpeaker" onchange="updateTopkComparison()">
+                <!-- Will be populated with speaker options -->
+            </select>
+        </div>
+        
+        <div class="sample-text">
+            <p><strong>Sample Text:</strong></p>
+            <p><em>"Epic orchestral music plays as pixelated text scrolls across a starry background, revealing the legend of Casta, a powerful creature contained in a separate dimension."</em></p>
+        </div>
+        
+        <button onclick="playAllTopks()">Play All Top-K Values Sequentially</button>
+        
+        <div id="topkComparisonContainer" class="comparison-container">
+            <div class="loading">Loading top-k comparison...</div>
+        </div>
+    </div>
+    
+    <div id="feedback-summary" class="tab-content">
+        <h2>Voice Feedback Summary</h2>
+        <p>This tab shows aggregated feedback on voice characteristics for each speaker ID.</p>
+        
+        <div id="feedbackSummaryContainer" class="feedback-summary">
+            <div class="loading">Loading feedback summary...</div>
+        </div>
+    </div>
+    
+    <div id="about" class="tab-content">
+        <h2>About CSM Voice Explorer</h2>
+        
+        <p>This tool explores the Conversational Speech Model (CSM) from Sesame AI Labs, a state-of-the-art AI voice generation model.</p>
+        
+        <h3>Parameter Explanations</h3>
+        
+        <h4>Speaker ID</h4>
+        <p>Controls the voice characteristics. Different speaker IDs produce different voice styles (male/female, pitch, tone, etc.).</p>
+        
+        <h4>Temperature</h4>
+        <p>Controls randomness in generation:</p>
+        <ul>
+            <li><strong>Low temperature (0.5)</strong> - More consistent, predictable, potentially monotone</li>
+            <li><strong>Medium temperature (0.75-0.9)</strong> - Balanced, natural delivery</li>
+            <li><strong>High temperature (1.1+)</strong> - More varied, expressive, potentially less consistent</li>
+        </ul>
+        
+        <h4>Top-K</h4>
+        <p>Controls diversity by limiting choice to top K probable tokens:</p>
+        <ul>
+            <li><strong>Low top-k (20)</strong> - More focused, less diverse word choices</li>
+            <li><strong>Medium top-k (50)</strong> - Balanced word variety</li>
+            <li><strong>High top-k (80+)</strong> - More diverse, creative word choices</li>
+        </ul>
+        
+        <h3>How to Use This Explorer</h3>
+        <p>Use the tabs at the top to navigate between different views:</p>
+        <ul>
+            <li><strong>All Voice Samples</strong> - Browse all generated samples with filtering options</li>
+            <li><strong>Speaker Comparison</strong> - Compare different speaker IDs with the same other parameters</li>
+            <li><strong>Temperature Effects</strong> - Compare the effect of different temperature values</li>
+            <li><strong>TopK Effects</strong> - Compare the effect of different top-k values</li>
+        </ul>
+    </div>
+    
+    <script src="voice_samples.js"></script>
+    <script>
+        // Global variables
+        let allSamples = [];
+        let currentFilters = {
+            speaker: "all",
+            temperature: "all",
+            topk: "all"
+        };
+        let feedbackData = {};
+        
+        // Voice characteristic options
+        const voiceCharacteristics = {
+            gender: ["Male", "Female", "Androgynous"],
+            pitch: ["Very Low", "Low", "Medium", "High", "Very High"],
+            quality: ["Clear", "Raspy", "Smooth", "Robotic", "Warm", "Harsh"],
+            age: ["Young", "Adult", "Mature", "Elderly"]
+        };
+        
+        // Helper function to create audio element with controls
+        function createAudioElement(src) {
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.style.width = '100%';
+            
+            const source = document.createElement('source');
+            source.src = src;
+            source.type = 'audio/wav';
+            
+            audio.appendChild(source);
+            return audio;
+        }
+        
+        // Load samples from data file or placeholder
+        function loadSamples() {
+            fetch('voice_samples.js')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(text => {
+                    // Extract the JSON part from the JavaScript variable assignment
+                    const jsonStart = text.indexOf('{');
+                    const jsonEnd = text.lastIndexOf('}') + 1;
+                    const jsonText = text.substring(jsonStart, jsonEnd);
+                    
+                    // Parse the JSON
+                    const data = JSON.parse(jsonText);
+                    
+                    // Process the data
+                    const samples = data.samples || [];
+                    const basePath = data.base_path || '';
+                    
+                    // Assign to global allSamples variable
+                    allSamples = samples;
+                    
+                    // Add full path to each sample
+                    allSamples.forEach(sample => {
+                        // Check if the path is absolute (starts with /) or contains the home directory path
+                        if (basePath.startsWith('/home/') || basePath.startsWith('~')) {
+                            // For absolute paths, use the web-relative path
+                            sample.fullPath = `/voices/explore/${sample.filename}`;
+                        } else {
+                            // For relative paths, use as is
+                            sample.fullPath = `${basePath}/${sample.filename}`;
+                        }
+                    });
+                    
+                    populateFilters();
+                    filterSamples();
+                    populateComparisons();
+                })
+                .catch(error => {
+                    console.error("Error loading voice samples:", error);
+                    
+                    // Fallback: Try to use the script-loaded variable if available
+                    if (typeof voiceExplorationSamples !== 'undefined') {
+                        console.log("Using script-loaded samples as fallback");
+                        
+                        allSamples = voiceExplorationSamples.samples || [];
+                        const basePath = voiceExplorationSamples.base_path || '';
+                        
+                        // Add full path to each sample
+                        allSamples.forEach(sample => {
+                            if (basePath.startsWith('/home/') || basePath.startsWith('~')) {
+                                sample.fullPath = `/voices/explore/${sample.filename}`;
+                            } else {
+                                sample.fullPath = `${basePath}/${sample.filename}`;
+                            }
+                        });
+                        
+                        populateFilters();
+                        filterSamples();
+                        populateComparisons();
+                    } else {
+                        document.getElementById('sampleContainer').innerHTML = 
+                            "<p>Error loading voice samples. Please check the console for details.</p>";
+                    }
+                });
+        }
+        
+        // Populate filter dropdowns
+        function populateFilters() {
+            const speakerFilter = document.getElementById('speakerFilter');
+            const temperatureFilter = document.getElementById('temperatureFilter');
+            const topkFilter = document.getElementById('topkFilter');
+            
+            // Clear existing options (keep the "All" option)
+            speakerFilter.innerHTML = '<option value="all">All Speakers</option>';
+            temperatureFilter.innerHTML = '<option value="all">All Temperatures</option>';
+            topkFilter.innerHTML = '<option value="all">All Top-K</option>';
+            
+            // Get unique values
+            const speakers = [...new Set(allSamples.map(sample => sample.speaker_id))].sort((a, b) => a - b);
+            const temperatures = [...new Set(allSamples.map(sample => sample.temperature))].sort((a, b) => a - b);
+            const topks = [...new Set(allSamples.map(sample => sample.topk))].sort((a, b) => a - b);
+            
+            // Add options
+            speakers.forEach(speaker => {
+                const option = document.createElement('option');
+                option.value = speaker;
+                option.textContent = `Speaker ${speaker}`;
+                speakerFilter.appendChild(option);
+            });
+            
+            temperatures.forEach(temp => {
+                const option = document.createElement('option');
+                option.value = temp;
+                option.textContent = `${temp}`;
+                temperatureFilter.appendChild(option);
+            });
+            
+            topks.forEach(topk => {
+                const option = document.createElement('option');
+                option.value = topk;
+                option.textContent = `${topk}`;
+                topkFilter.appendChild(option);
+            });
+            
+            // Also populate comparison dropdowns
+            const tempCompareSpeaker = document.getElementById('tempCompareSpeaker');
+            const topkCompareSpeaker = document.getElementById('topkCompareSpeaker');
+            
+            tempCompareSpeaker.innerHTML = '';
+            topkCompareSpeaker.innerHTML = '';
+            
+            speakers.forEach(speaker => {
+                // Only add if we have temperature comparisons for this speaker
+                const hasTempComparisons = temperatures.length > 1 && 
+                    temperatures.every(temp => 
+                        allSamples.some(s => s.speaker_id === speaker && s.temperature === temp && s.topk === 50)
+                    );
+                
+                if (hasTempComparisons) {
+                    const option = document.createElement('option');
+                    option.value = speaker;
+                    option.textContent = `Speaker ${speaker}`;
+                    tempCompareSpeaker.appendChild(option);
+                }
+                
+                // Only add if we have topk comparisons for this speaker
+                const hasTopkComparisons = topks.length > 1 && 
+                    topks.every(topk => 
+                        allSamples.some(s => s.speaker_id === speaker && s.temperature === 0.9 && s.topk === topk)
+                    );
+                
+                if (hasTopkComparisons) {
+                    const option = document.createElement('option');
+                    option.value = speaker;
+                    option.textContent = `Speaker ${speaker}`;
+                    topkCompareSpeaker.appendChild(option);
+                }
+            });
+        }
+        
+        // Filter samples based on selected criteria
+        function filterSamples() {
+            currentFilters.speaker = document.getElementById('speakerFilter').value;
+            currentFilters.temperature = document.getElementById('temperatureFilter').value;
+            currentFilters.topk = document.getElementById('topkFilter').value;
+            
+            const filteredSamples = allSamples.filter(sample => {
+                return (currentFilters.speaker === 'all' || sample.speaker_id == currentFilters.speaker) &&
+                       (currentFilters.temperature === 'all' || sample.temperature == currentFilters.temperature) &&
+                       (currentFilters.topk === 'all' || sample.topk == currentFilters.topk);
+            });
+            
+            displaySamples(filteredSamples);
+            document.getElementById('sampleCount').textContent = filteredSamples.length;
+        }
+        
+        // Reset all filters
+        function resetFilters() {
+            document.getElementById('speakerFilter').value = 'all';
+            document.getElementById('temperatureFilter').value = 'all';
+            document.getElementById('topkFilter').value = 'all';
+            filterSamples();
+        }
+        
+        // Display samples in the container
+        function displaySamples(samples) {
+            const container = document.getElementById('sampleContainer');
+            container.innerHTML = '';
+            
+            if (samples.length === 0) {
+                container.innerHTML = '<p>No samples match the selected filters.</p>';
+                return;
+            }
+            
+            samples.forEach(sample => {
+                const sampleDiv = document.createElement('div');
+                sampleDiv.className = 'voice-sample';
+                sampleDiv.setAttribute('data-sample-id', sample.id);
+                
+                const title = document.createElement('h3');
+                title.textContent = `Sample ${sample.id}`;
+                
+                const params = document.createElement('div');
+                params.className = 'params';
+                
+                const speakerParam = document.createElement('span');
+                speakerParam.className = 'param';
+                speakerParam.textContent = `Speaker: ${sample.speaker_id}`;
+                
+                const tempParam = document.createElement('span');
+                tempParam.className = 'param';
+                tempParam.textContent = `Temp: ${sample.temperature}`;
+                
+                const topkParam = document.createElement('span');
+                topkParam.className = 'param';
+                topkParam.textContent = `TopK: ${sample.topk}`;
+                
+                params.appendChild(speakerParam);
+                params.appendChild(tempParam);
+                params.appendChild(topkParam);
+                
+                const description = document.createElement('p');
+                description.className = 'voice-description';
+                description.textContent = sample.description;
+                
+                // Add attributes and notes to the sample div
+                addAttributesAndNotes(sampleDiv, sample);
+                
+                const genTime = document.createElement('p');
+                genTime.style.fontSize = '12px';
+                genTime.style.color = '#888';
+                genTime.textContent = `Generation time: ${sample.generation_time}`;
+                
+                const audio = createAudioElement(sample.fullPath);
+                
+                // Add feedback form
+                const feedbackForm = createFeedbackForm(sample.id);
+                
+                sampleDiv.appendChild(title);
+                sampleDiv.appendChild(params);
+                sampleDiv.appendChild(description);
+                sampleDiv.appendChild(audio);
+                sampleDiv.appendChild(genTime);
+                sampleDiv.appendChild(feedbackForm);
+                
+                container.appendChild(sampleDiv);
+            });
+        }
+        
+        // Populate comparison tabs
+        function populateComparisons() {
+            updateSpeakerComparison();
+            updateTempComparison();
+            updateTopkComparison();
+        }
+        
+        // Update speaker comparison tab
+        function updateSpeakerComparison() {
+            const container = document.getElementById('speakerComparisonContainer');
+            container.innerHTML = '';
+            
+            // Find samples with temp=0.9 and topk=50
+            const speakerSamples = allSamples.filter(sample => 
+                sample.temperature === 0.9 && sample.topk === 50
+            ).sort((a, b) => a.speaker_id - b.speaker_id);
+            
+            if (speakerSamples.length === 0) {
+                container.innerHTML = '<p>No speaker comparison samples available.</p>';
+                return;
+            }
+            
+            speakerSamples.forEach(sample => {
+                const sampleDiv = document.createElement('div');
+                sampleDiv.className = 'voice-sample';
+                sampleDiv.setAttribute('data-speaker', sample.speaker_id);
+                
+                const title = document.createElement('h3');
+                title.textContent = `Speaker ${sample.speaker_id}`;
+                
+                const description = document.createElement('p');
+                description.className = 'voice-description';
+                description.textContent = sample.description;
+                
+                const audio = createAudioElement(sample.fullPath);
+                audio.id = `speaker-audio-${sample.speaker_id}`;
+                
+                // Add attributes and notes to the sample div
+                addAttributesAndNotes(sampleDiv, sample);
+                
+                sampleDiv.appendChild(title);
+                sampleDiv.appendChild(description);
+                sampleDiv.appendChild(audio);
+                
+                container.appendChild(sampleDiv);
+            });
+        }
+        
+        // Update temperature comparison tab
+        function updateTempComparison() {
+            const container = document.getElementById('tempComparisonContainer');
+            container.innerHTML = '';
+            
+            const speakerId = parseInt(document.getElementById('tempCompareSpeaker').value) || 0;
+            
+            // Find samples with the selected speaker and topk=50
+            const tempSamples = allSamples.filter(sample => 
+                sample.speaker_id === speakerId && sample.topk === 50
+            ).sort((a, b) => a.temperature - b.temperature);
+            
+            if (tempSamples.length === 0) {
+                container.innerHTML = '<p>No temperature comparison samples available for Speaker ' + speakerId + '.</p>';
+                return;
+            }
+            
+            tempSamples.forEach(sample => {
+                const sampleDiv = document.createElement('div');
+                sampleDiv.className = 'voice-sample';
+                sampleDiv.setAttribute('data-temperature', sample.temperature);
+                
+                const title = document.createElement('h3');
+                title.textContent = `Temperature ${sample.temperature}`;
+                
+                const description = document.createElement('p');
+                description.className = 'voice-description';
+                
+                // Highlight the temperature part of the description
+                const descParts = sample.description.split(' with ');
+                if (descParts.length > 1) {
+                    const tempDesc = descParts[1].split(' and ')[0];
+                    description.innerHTML = `${descParts[0]} with <span class="highlight">${tempDesc}</span> and ${descParts[1].split(' and ')[1]}`;
+                } else {
+                    description.textContent = sample.description;
+                }
+                
+                const audio = createAudioElement(sample.fullPath);
+                audio.id = `temp-audio-${sample.temperature}`;
+                
+                // Add attributes and notes to the sample div
+                addAttributesAndNotes(sampleDiv, sample);
+                
+                sampleDiv.appendChild(title);
+                sampleDiv.appendChild(description);
+                sampleDiv.appendChild(audio);
+                
+                container.appendChild(sampleDiv);
+            });
+        }
+        
+        // Update topk comparison tab
+        function updateTopkComparison() {
+            const container = document.getElementById('topkComparisonContainer');
+            container.innerHTML = '';
+            
+            const speakerId = parseInt(document.getElementById('topkCompareSpeaker').value) || 0;
+            
+            // Find samples with the selected speaker and temp=0.9
+            const topkSamples = allSamples.filter(sample => 
+                sample.speaker_id === speakerId && sample.temperature === 0.9
+            ).sort((a, b) => a.topk - b.topk);
+            
+            if (topkSamples.length === 0) {
+                container.innerHTML = '<p>No top-k comparison samples available for Speaker ' + speakerId + '.</p>';
+                return;
+            }
+            
+            topkSamples.forEach(sample => {
+                const sampleDiv = document.createElement('div');
+                sampleDiv.className = 'voice-sample';
+                sampleDiv.setAttribute('data-topk', sample.topk);
+                
+                const title = document.createElement('h3');
+                title.textContent = `Top-K ${sample.topk}`;
+                
+                const description = document.createElement('p');
+                description.className = 'voice-description';
+                
+                // Highlight the topk part of the description
+                const descParts = sample.description.split(' and ');
+                if (descParts.length > 1) {
+                    description.innerHTML = `${descParts[0]} and <span class="highlight">${descParts[1]}</span>`;
+                } else {
+                    description.textContent = sample.description;
+                }
+                
+                const audio = createAudioElement(sample.fullPath);
+                audio.id = `topk-audio-${sample.topk}`;
+                
+                // Add attributes and notes to the sample div
+                addAttributesAndNotes(sampleDiv, sample);
+                
+                sampleDiv.appendChild(title);
+                sampleDiv.appendChild(description);
+                sampleDiv.appendChild(audio);
+                
+                container.appendChild(sampleDiv);
+            });
+        }
+        
+        // Play all speakers sequentially
+        function playAllSpeakers() {
+            const speakerSamples = document.querySelectorAll('#speakerComparisonContainer .voice-sample');
+            playSequentially(Array.from(speakerSamples).map(div => {
+                const speakerId = div.getAttribute('data-speaker');
+                return document.getElementById(`speaker-audio-${speakerId}`);
+            }));
+        }
+        
+        // Play all temperatures sequentially
+        function playAllTemperatures() {
+            const tempSamples = document.querySelectorAll('#tempComparisonContainer .voice-sample');
+            playSequentially(Array.from(tempSamples).map(div => {
+                const temp = div.getAttribute('data-temperature');
+                return document.getElementById(`temp-audio-${temp}`);
+            }));
+        }
+        
+        // Play all topk values sequentially
+        function playAllTopks() {
+            const topkSamples = document.querySelectorAll('#topkComparisonContainer .voice-sample');
+            playSequentially(Array.from(topkSamples).map(div => {
+                const topk = div.getAttribute('data-topk');
+                return document.getElementById(`topk-audio-${topk}`);
+            }));
+        }
+        
+        // Play a sequence of audio elements
+        function playSequentially(audioElements) {
+            let currentIndex = 0;
+            
+            function playNext() {
+                if (currentIndex >= audioElements.length) {
+                    return; // End of the list
+                }
+                
+                const audioElement = audioElements[currentIndex];
+                audioElement.onended = () => {
+                    currentIndex++;
+                    setTimeout(playNext, 1000); // Wait 1 second between samples
+                };
+                
+                audioElement.play();
+            }
+            
+            playNext();
+        }
+        
+        // Switch between tabs
+        function openTab(evt, tabName) {
+            // Hide all tab content
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+            
+            // Remove 'active' class from all tabs
+            const tabs = document.getElementsByClassName('tab');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            // Show the selected tab and add 'active' class to the button
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+        
+        // Load feedback data if available
+        function loadFeedbackData() {
+            fetch('http://localhost:8000/get_feedback_summary')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Process the feedback data
+                    feedbackData = {};
+                    
+                    // Convert the array-based feedback to our object format
+                    if (data.feedback && Array.isArray(data.feedback)) {
+                        data.feedback.forEach(item => {
+                            if (item.sampleId && item.feedback) {
+                                feedbackData[item.sampleId] = item.feedback;
+                            }
+                        });
+                    }
+                    
+                    console.log("Loaded feedback data:", feedbackData);
+                    
+                    // Update any displayed samples with feedback data
+                    updateSamplesWithFeedback();
+                    
+                    // Update the feedback summary tab if it's visible
+                    if (document.getElementById('feedback-summary').classList.contains('active')) {
+                        updateFeedbackSummary();
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading feedback data:", error);
+                    // Initialize empty feedback data
+                    feedbackData = {};
+                });
+        }
+        
+        // Update displayed samples with feedback data
+        function updateSamplesWithFeedback() {
+            // Update any feedback status indicators that are currently displayed
+            document.querySelectorAll('.voice-sample').forEach(sampleDiv => {
+                const sampleId = sampleDiv.getAttribute('data-sample-id');
+                if (sampleId && feedbackData[sampleId]) {
+                    const statusElem = sampleDiv.querySelector('.feedback-status');
+                    if (statusElem) {
+                        statusElem.textContent = "Feedback recorded. Thank you!";
+                    }
+                    
+                    // Update selected options
+                    const feedback = feedbackData[sampleId];
+                    for (const category in feedback) {
+                        if (category !== 'notes') {
+                            const value = feedback[category];
+                            const option = sampleDiv.querySelector(`.feedback-option[data-category="${category}"][data-value="${value}"]`);
+                            if (option) {
+                                option.classList.add('selected');
+                            }
+                        }
+                    }
+                    
+                    // Update notes if any
+                    const notesElem = sampleDiv.querySelector('.feedback-notes');
+                    if (notesElem && feedback.notes) {
+                        notesElem.value = feedback.notes;
+                    }
+                }
+            });
+        }
+        
+        // Save feedback data
+        function saveFeedbackData(sampleId, feedback) {
+            // Update local data
+            feedbackData[sampleId] = feedback;
+            
+            // Prepare data for saving
+            const dataToSave = {
+                timestamp: new Date().toISOString(),
+                sampleId: sampleId,
+                feedback: feedback
+            };
+            
+            // Send to server
+            fetch('http://localhost:8000/save_feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dataToSave)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Feedback saved successfully:', data);
+                // Update feedback summary if it's displayed
+                updateFeedbackSummary();
+            })
+            .catch(error => {
+                console.error('Error saving feedback:', error);
+                alert('There was an error saving your feedback. Please try again.');
+            });
+            
+            return dataToSave;
+        }
+        
+        // Handle feedback submission
+        function submitFeedback(event, sampleId) {
+            event.preventDefault();
+            
+            const form = event.target.closest('.feedback-form');
+            const selectedOptions = {};
+            
+            // Get selected options
+            form.querySelectorAll('.feedback-option.selected').forEach(option => {
+                const category = option.getAttribute('data-category');
+                const value = option.getAttribute('data-value');
+                selectedOptions[category] = value;
+            });
+            
+            // Get notes
+            const notes = form.querySelector('.feedback-notes').value.trim();
+            if (notes) {
+                selectedOptions.notes = notes;
+            }
+            
+            // Save feedback
+            saveFeedbackData(sampleId, selectedOptions);
+            
+            // Update status
+            const statusElem = form.querySelector('.feedback-status');
+            statusElem.textContent = "Feedback recorded. Thank you!";
+            
+            // Update feedback summary if it's displayed
+            updateFeedbackSummary();
+            
+            return false;
+        }
+        
+        // Toggle selection of feedback option
+        function toggleFeedbackOption(event) {
+            const option = event.target;
+            const category = option.getAttribute('data-category');
+            const form = option.closest('.feedback-form');
+            
+            // Deselect other options in the same category
+            form.querySelectorAll(`.feedback-option[data-category="${category}"]`).forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // Select this option
+            option.classList.add('selected');
+        }
+        
+        // Create feedback form for a sample
+        function createFeedbackForm(sampleId) {
+            const form = document.createElement('div');
+            form.className = 'feedback-form';
+            
+            const heading = document.createElement('h4');
+            heading.textContent = 'Voice Feedback';
+            form.appendChild(heading);
+            
+            // Create options for each category
+            for (const category in voiceCharacteristics) {
+                const categoryLabel = document.createElement('div');
+                categoryLabel.textContent = category.charAt(0).toUpperCase() + category.slice(1) + ':';
+                categoryLabel.style.fontSize = '12px';
+                categoryLabel.style.marginTop = '5px';
+                form.appendChild(categoryLabel);
+                
+                const options = document.createElement('div');
+                options.className = 'feedback-options';
+                
+                voiceCharacteristics[category].forEach(value => {
+                    const option = document.createElement('span');
+                    option.className = 'feedback-option';
+                    option.textContent = value;
+                    option.setAttribute('data-category', category);
+                    option.setAttribute('data-value', value);
+                    option.onclick = toggleFeedbackOption;
+                    
+                    // Check if this option is already selected in feedback data
+                    if (feedbackData[sampleId] && feedbackData[sampleId][category] === value) {
+                        option.classList.add('selected');
+                    }
+                    
+                    options.appendChild(option);
+                });
+                
+                form.appendChild(options);
+            }
+            
+            // Notes field
+            const notesLabel = document.createElement('div');
+            notesLabel.textContent = 'Additional Notes:';
+            notesLabel.style.fontSize = '12px';
+            notesLabel.style.marginTop = '5px';
+            form.appendChild(notesLabel);
+            
+            const notes = document.createElement('textarea');
+            notes.className = 'feedback-notes';
+            notes.rows = 2;
+            notes.placeholder = 'Any other observations about this voice...';
+            
+            // Set existing notes if any
+            if (feedbackData[sampleId] && feedbackData[sampleId].notes) {
+                notes.value = feedbackData[sampleId].notes;
+            }
+            
+            form.appendChild(notes);
+            
+            // Submit button
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'feedback-submit';
+            submitBtn.textContent = 'Save Feedback';
+            submitBtn.onclick = (e) => submitFeedback(e, sampleId);
+            form.appendChild(submitBtn);
+            
+            // Status message
+            const status = document.createElement('div');
+            status.className = 'feedback-status';
+            
+            // Show status if feedback already exists
+            if (feedbackData[sampleId]) {
+                status.textContent = "Feedback recorded. Thank you!";
+            }
+            
+            form.appendChild(status);
+            
+            return form;
+        }
+        
+        // Update feedback summary tab
+        function updateFeedbackSummary() {
+            const container = document.getElementById('feedbackSummaryContainer');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (Object.keys(feedbackData).length === 0) {
+                container.innerHTML = '<p>No feedback data available yet.</p>';
+                return;
+            }
+            
+            // Create summary tables for each category
+            for (const category in voiceCharacteristics) {
+                const categoryHeading = document.createElement('h3');
+                categoryHeading.textContent = category.charAt(0).toUpperCase() + category.slice(1) + ' Feedback';
+                container.appendChild(categoryHeading);
+                
+                // Count occurrences for each speaker ID
+                const speakerCounts = {};
+                
+                // Initialize counts
+                allSamples.forEach(sample => {
+                    if (!speakerCounts[sample.speaker_id]) {
+                        speakerCounts[sample.speaker_id] = {};
+                    }
+                    
+                    voiceCharacteristics[category].forEach(value => {
+                        if (!speakerCounts[sample.speaker_id][value]) {
+                            speakerCounts[sample.speaker_id][value] = 0;
+                        }
+                    });
+                });
+                
+                // Count feedback
+                for (const sampleId in feedbackData) {
+                    const feedback = feedbackData[sampleId];
+                    if (feedback[category]) {
+                        const sample = allSamples.find(s => s.id == sampleId);
+                        if (sample) {
+                            speakerCounts[sample.speaker_id][feedback[category]]++;
+                        }
+                    }
+                }
+                
+                // Create table
+                const table = document.createElement('table');
+                table.className = 'feedback-table';
+                
+                // Header row
+                const headerRow = document.createElement('tr');
+                const speakerHeader = document.createElement('th');
+                speakerHeader.textContent = 'Speaker ID';
+                headerRow.appendChild(speakerHeader);
+                
+                voiceCharacteristics[category].forEach(value => {
+                    const th = document.createElement('th');
+                    th.textContent = value;
+                    headerRow.appendChild(th);
+                });
+                
+                table.appendChild(headerRow);
+                
+                // Data rows
+                Object.keys(speakerCounts).sort((a, b) => a - b).forEach(speakerId => {
+                    const row = document.createElement('tr');
+                    
+                    const speakerCell = document.createElement('td');
+                    speakerCell.textContent = `Speaker ${speakerId}`;
+                    row.appendChild(speakerCell);
+                    
+                    voiceCharacteristics[category].forEach(value => {
+                        const td = document.createElement('td');
+                        const count = speakerCounts[speakerId][value];
+                        
+                        if (count > 0) {
+                            td.textContent = value;
+                            const countSpan = document.createElement('span');
+                            countSpan.className = 'feedback-count';
+                            countSpan.textContent = count;
+                            td.appendChild(countSpan);
+                        } else {
+                            td.textContent = '-';
+                        }
+                        
+                        row.appendChild(td);
+                    });
+                    
+                    table.appendChild(row);
+                });
+                
+                container.appendChild(table);
+            }
+            
+            // Add export button
+            const exportBtn = document.createElement('button');
+            exportBtn.textContent = 'Export Feedback Database';
+            exportBtn.style.marginTop = '20px';
+            exportBtn.onclick = () => {
+                // Fetch the complete database from the server
+                fetch('http://localhost:8000/get_feedback_summary')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Create downloadable file
+                        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'voice_feedback_export.json';
+                        a.style.display = 'none';
+                        document.body.appendChild(a);
+                        a.click();
+                        
+                        setTimeout(() => {
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        }, 100);
+                    })
+                    .catch(error => {
+                        console.error('Error exporting feedback data:', error);
+                        alert('There was an error exporting the feedback data. Please try again.');
+                    });
+            };
+            
+            container.appendChild(exportBtn);
+        }
+        
+        // Helper function to add attributes and notes to a sample div
+        function addAttributesAndNotes(sampleDiv, sample) {
+            // Add attributes section if available
+            if (sample.attributes && Object.keys(sample.attributes).length > 0) {
+                const attributesDiv = document.createElement('div');
+                attributesDiv.className = 'voice-attributes';
+                attributesDiv.style.marginTop = '10px';
+                attributesDiv.style.padding = '8px';
+                attributesDiv.style.backgroundColor = '#1a1a1a';
+                attributesDiv.style.borderRadius = '5px';
+                
+                const attributesTitle = document.createElement('strong');
+                attributesTitle.textContent = 'Voice Attributes: ';
+                attributesDiv.appendChild(attributesTitle);
+                
+                const attributesList = document.createElement('span');
+                const attributesText = Object.entries(sample.attributes)
+                    .map(([key, value]) => `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`)
+                    .join(', ');
+                attributesList.textContent = attributesText;
+                attributesDiv.appendChild(attributesList);
+                
+                sampleDiv.appendChild(attributesDiv);
+            }
+            
+            // Add user notes if available
+            if (sample.user_notes && sample.user_notes.length > 0) {
+                const notesDiv = document.createElement('div');
+                notesDiv.className = 'voice-notes';
+                notesDiv.style.marginTop = '10px';
+                notesDiv.style.padding = '8px';
+                notesDiv.style.backgroundColor = '#1a1a1a';
+                notesDiv.style.borderRadius = '5px';
+                
+                const notesTitle = document.createElement('strong');
+                notesTitle.textContent = 'User Notes:';
+                notesDiv.appendChild(notesTitle);
+                
+                const notesList = document.createElement('ul');
+                notesList.style.marginTop = '5px';
+                notesList.style.paddingLeft = '20px';
+                
+                sample.user_notes.forEach(note => {
+                    const noteItem = document.createElement('li');
+                    noteItem.textContent = note;
+                    notesList.appendChild(noteItem);
+                });
+                
+                notesDiv.appendChild(notesList);
+                sampleDiv.appendChild(notesDiv);
+            }
+        }
+        
+        // Initialize when the page loads
+        window.onload = function() {
+            loadSamples();
+            loadFeedbackData();
+        };
+    </script>
+</body>
+</html> 
