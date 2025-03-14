@@ -158,9 +158,29 @@ To generate a new set of 100 voices with 80% female voices:
 ./generate_more_female_voices.sh
 ```
 
-This script generates:
+To generate additional voice sets:
+
+```bash
+./generate_100_more_voices.sh
+```
+
+These scripts generate:
 - 80 female voices with higher expressivity
 - 20 male voices with varied characteristics
+
+### Preserving Voice Samples
+
+To ensure all generated voices are preserved:
+
+```bash
+python3 merge_voice_samples.py --replace
+```
+
+For automatic preservation during generation:
+
+```bash
+./auto_merge_voices.sh
+```
 
 For more details, see [VOICE_GENERATION.md](VOICE_GENERATION.md).
 

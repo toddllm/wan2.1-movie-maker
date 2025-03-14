@@ -17,6 +17,39 @@ The script:
 2. Generates 20 male voices using speakers 0, 1, 3, 4, and 6 with varied expressivity (temperatures 0.9, 1.1, and 1.3)
 3. Updates the voice explorer interface automatically
 
+### `generate_100_more_voices.sh`
+This script generates an additional 100 voice samples with the same 80/20 female/male ratio.
+
+```bash
+./generate_100_more_voices.sh
+```
+
+The script follows the same pattern as `generate_more_female_voices.sh` but can be run multiple times to generate more voices.
+
+### `merge_voice_samples.py`
+This utility script ensures that newly generated voices are added to the existing collection without overwriting previous samples.
+
+```bash
+python3 merge_voice_samples.py --replace
+```
+
+The script:
+1. Reads the backup and current voice sample files
+2. Merges the samples, avoiding duplicates
+3. Updates the voice_samples.js file with the combined data
+
+### `auto_merge_voices.sh`
+This script automatically runs the merge operation at regular intervals to preserve all voice samples during generation.
+
+```bash
+./auto_merge_voices.sh
+```
+
+The script:
+1. Runs the merge_voice_samples.py script every 5 minutes
+2. Logs the number of samples in the voice_samples.js file
+3. Ensures no samples are lost if the generation process overwrites the file
+
 ## Voice Characteristics
 
 ### Female Voices
