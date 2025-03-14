@@ -119,8 +119,8 @@ For more details, see [FEEDBACK_SYSTEM.md](FEEDBACK_SYSTEM.md).
 The system includes tools for exploring and generating voice samples:
 
 ```bash
-# Start the voice explorer interface
-python3 -m http.server 8000
+# Start the feedback server which also serves the voice explorer interface
+python3 feedback_server.py
 # Then navigate to http://localhost:8000/voice_explorer.html
 
 # Generate voice samples with different parameters
@@ -186,10 +186,10 @@ For more details, see [VOICE_GENERATION.md](VOICE_GENERATION.md).
 
 ### Exploring Generated Voices
 
-Start the web server and navigate to the Voice Explorer:
+Start the feedback server and navigate to the Voice Explorer:
 
 ```bash
-./start_server.sh
+python3 feedback_server.py
 ```
 
 Then open http://localhost:8000/voice_explorer.html in your browser.

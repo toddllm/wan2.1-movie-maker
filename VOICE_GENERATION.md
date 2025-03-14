@@ -69,9 +69,9 @@ The script:
 ## Voice Explorer
 Generated voices can be explored through the Voice Explorer interface:
 
-1. Start the web server:
+1. Start the feedback server:
    ```bash
-   cd /home/tdeshane/movie_maker && ./start_server.sh
+   cd /home/tdeshane/movie_maker && python3 feedback_server.py
    ```
 
 2. Navigate to http://localhost:8000/voice_explorer.html in your browser
