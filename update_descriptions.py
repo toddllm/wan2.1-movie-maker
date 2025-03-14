@@ -103,6 +103,7 @@ def update_descriptions(last_update_time=None):
         return
     
     updates_made = 0
+    description_updates = 0
     
     # Create a mapping of sample ID to sample object
     sample_map = {sample['id']: sample for sample in samples_data['samples']}
@@ -140,6 +141,26 @@ def update_descriptions(last_update_time=None):
         description = sample['description']
         updated = False
         
+        # Process gender feedback
+        if 'gender' in feedback and feedback['gender']:
+            # Check if the description needs to be updated
+            current_gender = None
+            if "Female voice" in description:
+                current_gender = "Female"
+            elif "Male voice" in description:
+                current_gender = "Male"
+            elif "Androgynous voice" in description:
+                current_gender = "Androgynous"
+            
+            if current_gender and current_gender != feedback['gender']:
+                # Update the description with the new gender
+                new_description = description.replace(f"{current_gender} voice", f"{feedback['gender']} voice")
+                if new_description != description:
+                    sample['description'] = new_description
+                    logging.info(f"Updated gender for sample {sample_id} from {current_gender} to {feedback['gender']}")
+                    description_updates += 1
+                    updated = True
+        
         # Process user notes
         if 'notes' in feedback and feedback['notes']:
             if 'user_notes' not in sample:
@@ -167,11 +188,11 @@ def update_descriptions(last_update_time=None):
     # Save updated samples if any changes were made
     if updates_made > 0:
         if save_samples(samples_data):
-            logging.info(f"Made {updates_made} description updates")
+            logging.info(f"Made {updates_made} updates ({description_updates} description updates)")
+            return f"Made {updates_made} updates ({description_updates} description updates)"
     else:
-        logging.info("No description updates needed")
-    
-    return updates_made
+        logging.info("No updates needed")
+        return "No updates needed"
 
 if __name__ == "__main__":
     update_descriptions() 
