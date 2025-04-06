@@ -5,7 +5,7 @@
 
 # Set up environment
 MOVIE_DIR="/home/tdeshane/movie_maker"
-PROMPTS_FILE="$MOVIE_DIR/hdmy5movie_prompts.txt"
+PROMPTS_FILE="$MOVIE_DIR/hdmy5movie_prompts_fixed_all.txt"
 OUTPUT_DIR="$MOVIE_DIR/hdmy5movie_videos"
 HTML_FILE="$MOVIE_DIR/hdmy5movie.html"
 LOG_DIR="$MOVIE_DIR/logs"
@@ -46,10 +46,12 @@ echo "Output will be saved to $OUTPUT_DIR"
 echo "Logs will be saved to $LOG_DIR/generation.log"
 
 # Run the Python script for video generation
+# You can specify a start index to resume from a specific point
+# For example, to start from the 10th prompt: --start 10
 nohup python3 "$MOVIE_DIR/generate_hdmy5movie.py" \
     --prompts "$PROMPTS_FILE" \
     --output "$OUTPUT_DIR" \
-    --model "/path/to/your/video/model" \
+    --start 0 \
     > "$LOG_DIR/generation.log" 2>&1 &
 
 GENERATOR_PID=$!

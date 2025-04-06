@@ -12,6 +12,7 @@ import argparse
 import logging
 import subprocess
 import torch
+import json
 from pathlib import Path
 
 # Configure logging
@@ -32,6 +33,13 @@ MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "phi4_model
 # Use the existing nexa_venv
 VENV_PATH = os.path.expanduser("~/nexa_venv")
 PYTHON_PATH = os.path.join(VENV_PATH, "bin", "python")
+
+# Audio parameters
+AUDIO_CONFIG = {
+    "audio_compression_rate": 2.0,
+    "audio_downsample_rate": 2,
+    "audio_feat_stride": 2
+}
 
 def install_requirements():
     """Install required packages for Phi-4-multimodal-instruct."""
@@ -91,6 +99,33 @@ def check_gpu():
     
     return True, supports_flash_attn
 
+def update_feature_extractor_config():
+    """Update the feature extractor configuration with the required audio parameters."""
+    try:
+        # Path to the feature extractor config
+        config_path = os.path.join(MODEL_DIR, "feature_extractor_config.json")
+        
+        if os.path.exists(config_path):
+            # Load existing config
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            
+            # Update with audio parameters
+            config.update(AUDIO_CONFIG)
+            
+            # Save updated config
+            with open(config_path, 'w') as f:
+                json.dump(config, f, indent=2)
+            
+            logger.info(f"Updated feature extractor config with audio parameters: {AUDIO_CONFIG}")
+            return True
+        else:
+            logger.warning(f"Feature extractor config not found at {config_path}")
+            return False
+    except Exception as e:
+        logger.error(f"Error updating feature extractor config: {e}")
+        return False
+
 def download_model(token=None):
     """Download the Phi-4-multimodal-instruct model."""
     logger.info(f"Downloading {MODEL_ID} model")
@@ -104,12 +139,31 @@ def download_model(token=None):
         
         # Download processor
         logger.info("Downloading processor...")
-        processor_kwargs = {"trust_remote_code": True}
+        processor_kwargs = {
+            "trust_remote_code": True
+        }
+        
         if token:
             processor_kwargs["token"] = token
         
         processor = AutoProcessor.from_pretrained(MODEL_ID, **processor_kwargs)
         processor.save_pretrained(os.path.join(MODEL_DIR))
+        
+        # Update feature extractor config with audio parameters
+        # Create a custom feature extractor config
+        feature_extractor_config_path = os.path.join(MODEL_DIR, "feature_extractor_config.json")
+        if os.path.exists(feature_extractor_config_path):
+            with open(feature_extractor_config_path, 'r') as f:
+                feature_extractor_config = json.load(f)
+            
+            # Update with audio parameters
+            feature_extractor_config.update(AUDIO_CONFIG)
+            
+            # Save updated config
+            with open(feature_extractor_config_path, 'w') as f:
+                json.dump(feature_extractor_config, f, indent=2)
+            
+            logger.info(f"Updated feature extractor config with audio parameters: {AUDIO_CONFIG}")
         
         # Download model
         logger.info("Downloading model (this may take a while)...")
@@ -139,6 +193,26 @@ def download_model(token=None):
         model = AutoModelForCausalLM.from_pretrained(MODEL_ID, **model_kwargs)
         model.save_pretrained(os.path.join(MODEL_DIR))
         
+        # Save audio parameters to a config file for future reference
+        with open(os.path.join(MODEL_DIR, "audio_config.json"), "w") as f:
+            json.dump(AUDIO_CONFIG, f, indent=2)
+        
+        # Also update the processor_config.json if it exists
+        processor_config_path = os.path.join(MODEL_DIR, "processor_config.json")
+        if os.path.exists(processor_config_path):
+            with open(processor_config_path, 'r') as f:
+                processor_config = json.load(f)
+            
+            # Add audio parameters to the processor config
+            if "feature_extractor" in processor_config:
+                processor_config["feature_extractor"].update(AUDIO_CONFIG)
+            
+            # Save updated config
+            with open(processor_config_path, 'w') as f:
+                json.dump(processor_config, f, indent=2)
+            
+            logger.info("Updated processor config with audio parameters")
+        
         logger.info(f"Successfully downloaded {MODEL_ID} to {MODEL_DIR}")
         return True
     except Exception as e:
@@ -156,8 +230,11 @@ def test_model(token=None):
         from transformers import AutoProcessor, AutoModelForCausalLM, GenerationConfig
         import torch
         
-        # Load processor and model
-        processor_kwargs = {"trust_remote_code": True}
+        # Load processor and model with required audio parameters
+        processor_kwargs = {
+            "trust_remote_code": True,
+        }
+        
         if token:
             processor_kwargs["token"] = token
         
@@ -235,6 +312,9 @@ def setup_model(token=None):
     if not download_model(token):
         logger.error("Failed to download model. Exiting.")
         return False
+    
+    # Update feature extractor config
+    update_feature_extractor_config()
     
     # Test model
     if not test_model(token):
