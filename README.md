@@ -194,41 +194,248 @@ python3 feedback_server.py
 
 Then open http://localhost:8000/voice_explorer.html in your browser.
 
-## Project Structure
+## Voice Analysis System
 
-- `app.py`: Main Flask application
-- `run.sh`: Script to start the web interface
-- `test_server.sh`: Script to start a test server on a specified port
-- `enhance_prompts.py`: Script to enhance prompts
-- `batch_generate.py`: Script for batch processing
-- `extract_frames.py`: Script to extract frames from videos for poster images
-- `hdmy5movie_poster_service.service`: Systemd service file for poster generation
-- `restart_hdmy5movie_generation.sh`: Script to restart the generation process
-- `feedback_server.py`: Server for collecting voice sample feedback
-- `update_descriptions.py`: Script for updating voice sample descriptions based on feedback
-- `voice_feedback_db.json`: Database of user feedback on voice samples
-- `voice_samples.js`: Voice sample data with descriptions
-- `voice_explorer.html`: Web interface for exploring voice samples
-- `listen.html`: Simplified interface for playing voice samples
-- `voice_status.html`: Interface for monitoring voice generation status
-- `start_feedback_server.sh`: Script to start the feedback server
-- `start_status_server.sh`: Script to start the status server
-- `explore_voices.sh`: Script to generate voice samples with different parameters
-- `check_files.py`: Script to check and monitor voice generation files
-- `check_ip_change.sh`: Script to check for IP address changes
-- `send_ip_notification.sh`: Script to send IP change notifications
-- `monitor_ip_changes.sh`: Combined script for IP monitoring
-- `templates/`: HTML templates for the web interface
-- `static/`: Static files (CSS, JS)
-- `clips/`: Generated video clips
-- `movies/`: Combined movies
-- `hdmy5movie_videos/`: Video files for the HDMY 5 Movie project
-- `hdmy5movie_posters/`: Poster images for the HDMY 5 Movie project
-- `hdmy5movie_voices/`: Voice samples for the HDMY 5 Movie project
-- `voices/`: Directory containing general voice samples
-- `voice_poc/`: Directory containing voice generation proof of concept implementations
-- `logs/`: Log files for various services
+This system provides tools for analyzing voice samples, organizing them by character, and browsing the resulting catalog.
 
-## License
+### Components
 
-MIT 
+1. **Voice Gender Analysis**: Analyzes voice samples to determine gender and other characteristics.
+2. **Voice Sample Organization**: Organizes voice samples into character profiles.
+3. **Voice Browser**: Web interface for browsing voice characters.
+
+### Scripts
+
+- `run_voice_gender_analysis.sh`: Runs gender analysis on voice samples.
+- `organize_voice_samples.py`: Organizes samples into character profiles.
+- `start_voice_browser.sh`: Starts the web interface for browsing voice characters.
+- `test_audio.sh`: Tests audio analysis on a single sample.
+- `reset_phi4_model.sh`: Resets the Phi-4 model directory if needed.
+- `phi4_audio_test.py`: Uses the Phi-4 multimodal model for advanced audio analysis.
+- `run_phi4_audio_test.sh`: Wrapper script for running the Phi-4 multimodal audio test.
+
+### Usage
+
+#### Testing Audio Analysis
+
+To test audio analysis on a single sample:
+
+```bash
+cd movie_maker
+./test_audio.sh [path/to/audio.wav]
+```
+
+If no audio file is specified, the script will find a sample file automatically.
+
+#### Using Phi-4 Multimodal for Audio Analysis
+
+For more advanced audio analysis using the Phi-4 multimodal model:
+
+```bash
+cd movie_maker
+./run_phi4_audio_test.sh [path/to/audio.wav]
+```
+
+This will:
+1. Load the Phi-4 multimodal model
+2. Process the audio file
+3. Analyze the voice to determine gender and other characteristics
+4. Provide a detailed analysis with confidence scores
+
+#### Running Full Analysis
+
+To run analysis on all voice samples:
+
+```bash
+cd movie_maker
+./run_voice_gender_analysis.sh
+```
+
+This will test 5 samples and prompt you to continue with the full analysis.
+
+#### Organizing Voice Samples
+
+To organize voice samples into character profiles:
+
+```bash
+cd movie_maker
+./organize_voice_samples.py
+```
+
+This creates character profiles and a master catalog.
+
+#### Browsing Voice Characters
+
+To browse voice characters through the web interface:
+
+```bash
+cd movie_maker
+./start_voice_browser.sh
+```
+
+Then access the provided URL in your browser.
+
+### Troubleshooting
+
+If you encounter issues with the Phi-4 model:
+
+1. Run `./reset_phi4_model.sh` to reset the model directory.
+2. Ensure audio files are in WAV format with a sample rate of 16000 Hz.
+3. Check that the required Python packages are installed.
+4. Look for error messages in the console output.
+5. For GPU acceleration, ensure CUDA is properly installed.
+
+### Requirements
+
+- Python 3.8+
+- PyTorch
+- Transformers library
+- SoundFile
+- Flask (for the voice browser)
+- CUDA-compatible GPU (recommended for faster processing)
+
+## Setup
+
+1. Make sure you have Python 3.8+ installed
+2. Install required packages:
+   ```
+   pip install torch torchaudio transformers
+   ```
+3. Run the setup script to download the Phi-4 model:
+   ```
+   ./setup_phi4_model.py
+   ```
+4. Fix the audio configuration (required for proper audio analysis):
+   ```
+   ./fix_phi4_audio.py
+   ```
+
+## Usage
+
+### Testing Audio Analysis
+
+To test if the system can analyze audio files correctly:
+
+```bash
+./test_audio.sh [optional_audio_file.wav]
+```
+
+This will:
+1. Check if the Phi-4 model is installed
+2. Fix the audio configuration if needed
+3. Analyze a sample audio file (or the one you specify)
+4. Display the analysis results
+
+### Running Voice Gender Analysis
+
+To analyze voice samples for gender identification:
+
+```bash
+./run_voice_gender_analysis.sh
+```
+
+This will:
+1. Test the analysis with 5 samples first
+2. Ask if you want to run the full analysis
+3. Save results to `hdmy5movie_voices/explore/gender_analysis.json`
+
+You can also run the analysis script directly with options:
+
+```bash
+./analyze_voice_gender.py --voice-dir PATH --metadata PATH --output PATH --limit NUM
+```
+
+### Organizing Voice Samples
+
+To organize voice samples into character profiles:
+
+```bash
+./organize_voice_samples.py
+```
+
+This will:
+1. Load the gender analysis results
+2. Group samples by speaker and gender
+3. Create character profiles with descriptions
+4. Organize files into a character-based structure
+5. Generate a catalog of all characters
+
+### Browsing Voice Characters
+
+To browse the organized voice characters in a web interface:
+
+```bash
+./start_voice_browser.sh
+```
+
+This will:
+1. Start a simple HTTP server
+2. Open a browser to view the voice characters
+3. Allow you to listen to samples and view character information
+
+## Troubleshooting
+
+If you encounter issues with audio analysis:
+
+1. Make sure you've run `fix_phi4_audio.py` to update the model configuration
+2. Check that your audio files are WAV format with 16000 Hz sample rate
+3. Verify that the paths to your voice samples are correct
+4. Check the log files for detailed error messages
+
+### Audio Format Requirements
+
+The Phi-4 model requires audio files to be:
+- WAV format
+- 16000 Hz sample rate
+- Mono (single channel)
+
+You can check and convert your audio files using the provided script:
+```bash
+./check_audio_format.py your_audio_file.wav
+```
+
+This script will:
+- Check if the audio file meets the requirements
+- Automatically resample to 16000 Hz if needed
+- Convert to mono if needed
+- Save the converted file with a suffix (_resampled.wav or _mono.wav)
+
+The `test_audio.sh` script automatically runs this check and uses the converted file if available.
+
+### Common Errors and Solutions
+
+#### SequenceFeatureExtractor Error
+
+If you see an error like `SequenceFeatureExtractor.__init__() got multiple values for argument 'feature_size'`, this indicates a configuration issue with the audio parameters. Try these steps:
+
+1. Run the fix script again:
+   ```bash
+   ./fix_phi4_audio.py
+   ```
+
+2. If that doesn't work, reset the model configuration:
+   ```bash
+   ./reset_phi4_model.sh --restore
+   ```
+   Then run the fix script again.
+
+3. If all else fails, you can completely remove and reinstall the model:
+   ```bash
+   ./reset_phi4_model.sh --remove
+   ./setup_phi4_model.py
+   ./fix_phi4_audio.py
+   ```
+
+#### Trust Remote Code Prompt
+
+If you're repeatedly asked to trust remote code, you can set the environment variable:
+```bash
+export TRANSFORMERS_TRUST_REMOTE_CODE=1
+```
+
+Or use the updated scripts which automatically set this variable.
+
+## Files
+
+- `setup_phi4_model.py` - Downloads and sets up the Phi-4 model
+- `fix_phi4_audio.py`

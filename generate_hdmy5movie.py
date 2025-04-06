@@ -4,6 +4,7 @@ import argparse
 import time
 import json
 import shutil
+import subprocess
 from pathlib import Path
 from datetime import datetime
 
@@ -75,29 +76,76 @@ def assign_prompts_to_sections(prompts):
     
     return sections
 
-def generate_video(prompt, output_path, model_path, seed=None):
+def generate_video(prompt, output_path, model_path=None, seed=None):
     """
     Generate a video using the specified prompt and model.
-    This is a placeholder function - in a real implementation,
-    you would call your actual video generation model.
+    Uses the direct_generate.py script for actual video generation.
     """
-    # Simulate video generation
     print(f"Generating video for prompt: {prompt[:50]}...")
     print(f"Output will be saved to: {output_path}")
     
-    # In a real implementation, you would call your video generation model here
-    # For example:
-    # command = f"python /path/to/video_generator.py --prompt '{prompt}' --output '{output_path}' --model '{model_path}'"
-    # os.system(command)
+    # Create a temporary prompt file
+    temp_prompt_file = os.path.join(os.path.dirname(output_path), "temp_prompt.txt")
+    with open(temp_prompt_file, 'w') as f:
+        f.write(prompt)
     
-    # Simulate processing time
-    time.sleep(1)
+    try:
+        # Get directory of output path
+        output_dir = os.path.dirname(output_path)
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Run the direct_generate.py script
+        cmd = [
+            "python3", 
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "direct_generate.py"),
+            "--input", temp_prompt_file,
+            "--duration", "10",  # 10 seconds video
+            "--width", "832",    # Default width
+            "--height", "480"    # Default height
+        ]
+        
+        print(f"Running command: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            print(f"Error generating video: {result.stderr}")
+            # If direct_generate.py fails, create a placeholder file
+            with open(output_path, 'w') as f:
+                f.write(f"Error generating video for prompt: {prompt}")
+            return False
+        
+        # The direct_generate.py script saves videos to the clips directory
+        # We need to find the most recently created video and move it to our output path
+        clips_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clips")
+        if os.path.exists(clips_dir):
+            # Find the most recently created video file
+            video_files = [os.path.join(clips_dir, f) for f in os.listdir(clips_dir) if f.endswith('.mp4')]
+            if video_files:
+                video_files.sort(key=os.path.getmtime, reverse=True)
+                latest_video = video_files[0]
+                
+                # Move the video to our output path
+                shutil.move(latest_video, output_path)
+                print(f"Moved video from {latest_video} to {output_path}")
+                return True
+            else:
+                print("No video files found in clips directory")
+                return False
+        else:
+            print(f"Clips directory {clips_dir} not found")
+            return False
     
-    # Create a dummy video file for demonstration
-    with open(output_path, 'w') as f:
-        f.write(f"This is a placeholder for a video generated from the prompt: {prompt}")
+    except Exception as e:
+        print(f"Exception during video generation: {str(e)}")
+        # Create a placeholder file in case of error
+        with open(output_path, 'w') as f:
+            f.write(f"Error generating video for prompt: {prompt}")
+        return False
     
-    return True
+    finally:
+        # Clean up temporary prompt file
+        if os.path.exists(temp_prompt_file):
+            os.remove(temp_prompt_file)
 
 def main():
     parser = argparse.ArgumentParser(description="Generate videos from prompts for HDMY 5 Movie")
@@ -105,7 +153,7 @@ def main():
                         help="Path to the prompts file")
     parser.add_argument("--output", default="/home/tdeshane/movie_maker/hdmy5movie_videos", 
                         help="Output directory for generated videos")
-    parser.add_argument("--model", default="/path/to/video/model", 
+    parser.add_argument("--model", default=None, 
                         help="Path to the video generation model")
     parser.add_argument("--start", type=int, default=0, 
                         help="Start from this prompt index (0-based)")
